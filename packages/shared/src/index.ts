@@ -66,3 +66,63 @@ export const DEFAULT_PNL_ROWS = [
 ];
 
 export const DEFAULT_PNL_COLUMNS = ['Budget', 'Actual', 'Variance', 'YTD'];
+
+export type AgentType =
+  | 'tax_advisor'
+  | 'retirement_planner'
+  | 'budget_coach'
+  | 'investment_analyst'
+  | 'general_cfo'
+  | 'debt_optimizer'
+  | 'estate_planner'
+  | 'insurance_reviewer'
+  | 'college_planner'
+  | 'subscription_hunter'
+  | 'cash_flow_forecaster'
+  | 'compliance_copilot'
+  | 'household_coordinator';
+
+export interface FinancialProfile {
+  lifeStage?: string;
+  riskTolerance?: string;
+  filingStatus?: string;
+  dependents?: number;
+  annualIncome?: number;
+  stateCode?: string;
+  goalsSummary?: string;
+}
+
+export interface RecommendationItem {
+  id: string;
+  title: string;
+  body?: string;
+  actionType: string;
+  priorityScore?: number;
+  confidence?: number;
+  status: 'pending' | 'accepted' | 'dismissed' | 'completed';
+}
+
+export interface InsightFeedbackInput {
+  insightId: string;
+  helpful?: boolean;
+  actedOn?: boolean;
+  dismissed?: boolean;
+  reason?: string;
+}
+
+export interface UserSignalInput {
+  signalType: string;
+  entityType?: string;
+  entityId?: string;
+  payload?: Record<string, unknown>;
+}
+
+export const INTELLIGENCE_QUALITY_GATES = {
+  factualAccuracyPct: 98,
+  categorizationAccuracyPct: 85,
+  forecastMapePct: 15,
+  insightAcceptancePct: 30,
+  hallucinationRatePct: 1,
+  agentLatencyP95Ms: 8000,
+  llmCostPerProUserUsd: 0.5,
+} as const;

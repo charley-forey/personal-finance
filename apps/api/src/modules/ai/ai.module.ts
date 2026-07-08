@@ -3,11 +3,12 @@ import { DatabaseModule } from '../../database.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { BillingModule } from '../billing/billing.module';
 import { KnowledgeService } from '../../services/platform.services';
+import { IntelligenceService } from '../../services/intelligence.service';
 import { AiController } from './ai.controller';
 
 @Module({
   imports: [DatabaseModule, AnalyticsModule, BillingModule],
   controllers: [AiController],
-  providers: [KnowledgeService],
+  providers: [KnowledgeService, IntelligenceService],
 })
 export class AiModule {}

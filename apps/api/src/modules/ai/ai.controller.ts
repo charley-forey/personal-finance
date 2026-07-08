@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, Req, Inject, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Req, Inject, UseGuards, Param } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { eq, desc, and } from 'drizzle-orm';
@@ -7,6 +7,7 @@ import { insights, agentMemories } from '@pf/database';
 import { AuthGuard, getAuth, RequireRoles } from '../../common/auth.guard';
 import { AnalyticsService } from '../../services/analytics.services';
 import { KnowledgeService } from '../../services/platform.services';
+import { IntelligenceService } from '../../services/intelligence.service';
 import { DATABASE } from '../../database.module';
 import { AgentChatDto } from '../../dto';
 import { PlanLimitsGuard, RequirePlanLimit } from '../billing/plan-limits.guard';
@@ -18,6 +19,7 @@ export class AiController {
   constructor(
     private analytics: AnalyticsService,
     private knowledge: KnowledgeService,
+    private intelligence: IntelligenceService,
     @Inject(DATABASE) private db: Database,
   ) {}
 
@@ -84,5 +86,49 @@ export class AiController {
   @RequireRoles('admin')
   async ingestKnowledge() {
     return this.knowledge.ingest();
+  }
+
+  @Post('insights/:id/feedback')
+  async insightFeedback(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Param('id') insightId: string,
+    @Body() body: { helpful?: boolean; actedOn?: boolean; dismissed?: boolean; reason?: string },
+  ) {
+    const auth = getAuth(req);
+    return this.intelligence.recordInsightFeedback(auth.orgId, auth.userId, {
+      insightId,
+      ...body,
+    });
+  }
+
+  @Get('recommendations')
+  async listRecommendations(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
+    const auth = getAuth(req);
+    return this.intelligence.listRecommendations(auth.orgId);
+  }
+
+  @Post('recommendations/generate')
+  async generateRecommendations(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
+    const auth = getAuth(req);
+    return this.intelligence.generateRecommendations(auth.orgId, auth.userId);
+  }
+
+  @Post('recommendations/:id/outcome')
+  async recommendationOutcome(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Param('id') id: string,
+    @Body() body: { outcome: string; notes?: string },
+  ) {
+    const auth = getAuth(req);
+    return this.intelligence.completeRecommendation(auth.orgId, id, body.outcome, body.notes);
+  }
+
+  @Post('signals')
+  async recordSignal(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Body() body: { signalType: string; entityType?: string; entityId?: string; payload?: Record<string, unknown> },
+  ) {
+    const auth = getAuth(req);
+    return this.intelligence.recordUserSignal(auth.orgId, auth.userId, body);
   }
 }

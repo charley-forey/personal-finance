@@ -24,6 +24,7 @@
     "@pf/events": "*",
     "@pf/plaid-client": "*",
     "@pf/shared": "*",
+    "@pf/intelligence": "*",
     "@pf/sync": "*",
     "@sentry/nestjs": "^10.64.0",
     "@sentry/node": "^10.64.0",

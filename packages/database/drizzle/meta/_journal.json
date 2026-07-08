@@ -8,6 +8,20 @@
       "when": 1783549290167,
       "tag": "0000_spooky_agent_zero",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783549290168,
+      "tag": "0001_agent_runs_created_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783549290169,
+      "tag": "0002_learning_loop",
+      "breakpoints": true
     }
   ]
 }

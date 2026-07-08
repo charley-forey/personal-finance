@@ -83,6 +83,14 @@ export const api = {
   cashFlowForecast: () => apiFetch<{ series: unknown[] }>('/forecasts/cash-flow'),
   insights: () => apiFetch<Insight[]>('/insights'),
   generateInsight: () => apiFetch<unknown>('/insights/generate', { method: 'POST', body: '{}' }),
+  insightFeedback: (id: string, data: { helpful?: boolean; actedOn?: boolean; dismissed?: boolean; reason?: string }) =>
+    apiFetch<unknown>(`/insights/${id}/feedback`, { method: 'POST', body: JSON.stringify(data) }),
+  recommendations: () => apiFetch<RecommendationItem[]>('/recommendations'),
+  generateRecommendations: () => apiFetch<RecommendationItem[]>('/recommendations/generate', { method: 'POST', body: '{}' }),
+  recommendationOutcome: (id: string, outcome: string, notes?: string) =>
+    apiFetch<unknown>(`/recommendations/${id}/outcome`, { method: 'POST', body: JSON.stringify({ outcome, notes }) }),
+  recordSignal: (data: { signalType: string; entityType?: string; entityId?: string; payload?: Record<string, unknown> }) =>
+    apiFetch<unknown>('/signals', { method: 'POST', body: JSON.stringify(data) }),
   healthScore: () => apiFetch<HealthScore>('/health-score'),
   healthScoreHistory: () => apiFetch<HealthScoreRecord[]>('/health-score/history'),
   activity: () => apiFetch<ActivityEvent[]>('/activity'),
@@ -341,6 +349,16 @@ export interface Insight {
   body: string;
   insightType: string;
   severity: string;
+}
+
+export interface RecommendationItem {
+  id: string;
+  title: string;
+  body?: string;
+  actionType: string;
+  priorityScore?: string;
+  confidence?: string;
+  status: string;
 }
 
 export interface HealthScore {

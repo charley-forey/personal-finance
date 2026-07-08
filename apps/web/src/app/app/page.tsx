@@ -45,6 +45,11 @@ const PlaidLinkButton = dynamic(
   },
 );
 
+const ActionQueue = dynamic(
+  () => import('@/components/action-queue').then((m) => m.ActionQueue),
+  { ssr: false, loading: () => <Skeleton className="h-32 w-full" /> },
+);
+
 interface UpcomingBill {
   id: string;
   name: string;
@@ -279,6 +284,10 @@ export default function DashboardPage() {
             </div>
           )}
         </Card>
+
+      <Card title="Your Action Queue" className="mb-6 md:mb-8">
+        <ActionQueue />
+      </Card>
 
       {hasAccounts && (
         <Card title="Connect More Accounts" className="mb-6 md:mb-8">
