@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../database.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { PlaidModule } from '../plaid/plaid.module';
+import { BillingModule } from '../billing/billing.module';
 import { CategoryService } from '../../services/category.service';
 import {
   NotificationService,
@@ -20,7 +21,7 @@ import { PlatformController } from './platform.controller';
 import { StorageService } from '../../services/storage.service';
 
 @Module({
-  imports: [DatabaseModule, AnalyticsModule, PlaidModule],
+  imports: [DatabaseModule, AnalyticsModule, PlaidModule, BillingModule],
   controllers: [PlatformController],
   providers: [
     NotificationService,
@@ -37,5 +38,6 @@ import { StorageService } from '../../services/storage.service';
     PlatformAdminGuard,
     StorageService,
   ],
+  exports: [ComplianceService, ApiKeyService],
 })
 export class PlatformModule {}

@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText, Upload } from 'lucide-react';
 import { PageHeader, Card } from '@/components/app-shell';
+import { PageError, PageLoading } from '@/components/page-states';
 import { Badge, Button, DataTable, EmptyState, Input, Select } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/format';
@@ -134,13 +135,9 @@ export default function DocumentsPage() {
         </Card>
       )}
 
-      {error && (
-        <Card className="mb-6 border-danger/50">
-          <p className="text-danger text-sm">{error.message}</p>
-        </Card>
-      )}
+      {error && <PageError message={error.message} />}
 
-      {isLoading && <p className="text-muted text-sm">Loading documents...</p>}
+      {isLoading && <PageLoading variant="table" count={4} className="mb-6" />}
 
       {!isLoading && !error && documents?.length === 0 && (
         <EmptyState

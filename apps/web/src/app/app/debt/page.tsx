@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PageHeader, Card, StatCard } from '@/components/app-shell';
+import { PageHeader, Card } from '@/components/app-shell';
+import { Button, Input, Select, StatCard } from '@/components/ui';
 import { api } from '@/lib/api';
 
 interface Debt {
@@ -45,30 +46,36 @@ export default function DebtPage() {
         <div className="space-y-4">
           {debts.map((debt, i) => (
             <div key={i} className="grid gap-3 sm:grid-cols-4">
-              <input placeholder="Name" className="bg-background border border-card-border rounded-lg px-3 py-2" value={debt.name} onChange={(e) => { const d = [...debts]; d[i] = { ...d[i]!, name: e.target.value }; setDebts(d); }} />
-              <input type="number" placeholder="Balance" className="bg-background border border-card-border rounded-lg px-3 py-2" value={debt.balance} onChange={(e) => { const d = [...debts]; d[i] = { ...d[i]!, balance: e.target.value }; setDebts(d); }} />
-              <input type="number" placeholder="APR %" className="bg-background border border-card-border rounded-lg px-3 py-2" value={debt.interestRate} onChange={(e) => { const d = [...debts]; d[i] = { ...d[i]!, interestRate: e.target.value }; setDebts(d); }} />
-              <input type="number" placeholder="Min payment" className="bg-background border border-card-border rounded-lg px-3 py-2" value={debt.minimumPayment} onChange={(e) => { const d = [...debts]; d[i] = { ...d[i]!, minimumPayment: e.target.value }; setDebts(d); }} />
+              <Input placeholder="Name" value={debt.name} onChange={(e) => { const d = [...debts]; d[i] = { ...d[i]!, name: e.target.value }; setDebts(d); }} />
+              <Input type="number" placeholder="Balance" value={debt.balance} onChange={(e) => { const d = [...debts]; d[i] = { ...d[i]!, balance: e.target.value }; setDebts(d); }} />
+              <Input type="number" placeholder="APR %" value={debt.interestRate} onChange={(e) => { const d = [...debts]; d[i] = { ...d[i]!, interestRate: e.target.value }; setDebts(d); }} />
+              <Input type="number" placeholder="Min payment" value={debt.minimumPayment} onChange={(e) => { const d = [...debts]; d[i] = { ...d[i]!, minimumPayment: e.target.value }; setDebts(d); }} />
             </div>
           ))}
-          <button onClick={() => setDebts([...debts, { name: '', balance: '', interestRate: '', minimumPayment: '' }])} className="text-sm text-primary">+ Add debt</button>
+          <Button variant="ghost" size="sm" onClick={() => setDebts([...debts, { name: '', balance: '', interestRate: '', minimumPayment: '' }])}>
+            + Add debt
+          </Button>
           <div className="grid gap-3 sm:grid-cols-2">
-            <input type="number" placeholder="Extra monthly payment" className="bg-background border border-card-border rounded-lg px-3 py-2" value={extraPayment} onChange={(e) => setExtraPayment(e.target.value)} />
-            <select className="bg-background border border-card-border rounded-lg px-3 py-2" value={strategy} onChange={(e) => setStrategy(e.target.value as 'avalanche' | 'snowball')}>
-              <option value="avalanche">Avalanche (highest APR first)</option>
-              <option value="snowball">Snowball (smallest balance first)</option>
-            </select>
+            <Input type="number" placeholder="Extra monthly payment" value={extraPayment} onChange={(e) => setExtraPayment(e.target.value)} />
+            <Select
+              options={[
+                { value: 'avalanche', label: 'Avalanche (highest APR first)' },
+                { value: 'snowball', label: 'Snowball (smallest balance first)' },
+              ]}
+              value={strategy}
+              onChange={(e) => setStrategy(e.target.value as 'avalanche' | 'snowball')}
+            />
           </div>
-          <button onClick={simulate} disabled={loading} className="px-4 py-2 bg-primary text-black rounded-lg font-medium disabled:opacity-50">
-            {loading ? 'Simulating...' : 'Run Simulation'}
-          </button>
+          <Button onClick={simulate} disabled={loading}>
+            {loading ? 'Simulating…' : 'Run Simulation'}
+          </Button>
         </div>
       </Card>
 
       {result && (
         <div className="grid grid-cols-2 gap-4">
-          <StatCard label="Months to Payoff" value={String(result.months)} />
-          <StatCard label="Total Interest" value={`$${result.totalInterest.toFixed(0)}`} />
+          <StatCard title="Months to Payoff" value={String(result.months)} />
+          <StatCard title="Total Interest" value={`$${result.totalInterest.toFixed(0)}`} />
         </div>
       )}
     </div>

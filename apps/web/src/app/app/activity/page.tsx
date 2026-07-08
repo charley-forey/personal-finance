@@ -2,7 +2,8 @@
 
 import { Activity } from 'lucide-react';
 import { PageHeader } from '@/components/app-shell';
-import { Badge, DataTable, EmptyState, Skeleton } from '@/components/ui';
+import { PageError, PageLoading } from '@/components/page-states';
+import { Badge, DataTable, EmptyState, StatCard } from '@/components/ui';
 import type { DataTableColumn } from '@/components/ui';
 import { useActivity } from '@/hooks/use-finance';
 import type { ActivityEvent } from '@/lib/api';
@@ -50,16 +51,10 @@ export default function ActivityPage() {
         description="Recent changes across your financial data"
       />
 
-      {error && (
-        <p className="mb-4 text-sm text-red-400">{error.message}</p>
-      )}
+      {error && <PageError message={error.message} />}
 
       {isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </div>
+        <PageLoading variant="table" count={4} />
       ) : (events ?? []).length === 0 ? (
         <EmptyState
           icon={Activity}
@@ -67,12 +62,16 @@ export default function ActivityPage() {
           description="Changes from syncs, edits, and imports will appear here."
         />
       ) : (
-        <DataTable
-          columns={columns}
-          data={events ?? []}
-          keyExtractor={(e) => e.id}
-          emptyMessage="No activity recorded."
-        />
+        <>
+          <div className="mb-6 max-w-xs">
+            <StatCard title="Recent Events" value={String(events?.length ?? 0)} />
+          </div>
+          <DataTable
+            columns={columns}
+            data={events ?? []}
+            keyExtractor={(e) => e.id}
+          />
+        </>
       )}
     </div>
   );

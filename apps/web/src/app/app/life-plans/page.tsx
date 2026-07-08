@@ -1,38 +1,79 @@
 'use client';
 
 import { useState } from 'react';
+import { Map } from 'lucide-react';
 import { PageHeader, Card } from '@/components/app-shell';
+import { PageLoading } from '@/components/page-states';
+import { Button, EmptyState, Input, Select } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 
 export default function LifePlansPage() {
-  const { data: plans, refetch } = useQuery({ queryKey: ['life-plans'], queryFn: () => api.lifePlans() });
+  const { data: plans, isLoading, refetch } = useQuery({ queryKey: ['life-plans'], queryFn: () => api.lifePlans() });
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', planType: 'home', targetDate: '' });
+  const [creating, setCreating] = useState(false);
 
   const create = async () => {
-    await api.createLifePlan(form);
-    setShowForm(false);
-    refetch();
+    setCreating(true);
+    try {
+      await api.createLifePlan(form);
+      setShowForm(false);
+      refetch();
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
     <div>
-      <PageHeader title="Life Plans" description="Home, college, wedding, and major life goals" actions={
-        <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-primary text-black rounded-lg font-medium text-sm">{showForm ? 'Cancel' : 'New Plan'}</button>
-      } />
+      <PageHeader
+        title="Life Plans"
+        description="Home, college, wedding, and major life goals"
+        actions={
+          <Button size="sm" onClick={() => setShowForm(!showForm)}>
+            {showForm ? 'Cancel' : 'New Plan'}
+          </Button>
+        }
+      />
+
+      {isLoading && <PageLoading variant="cards" count={2} className="mb-6" />}
 
       {showForm && (
         <Card className="mb-6">
           <div className="grid gap-3 sm:grid-cols-3">
-            <input placeholder="Plan name" className="bg-background border border-card-border rounded-lg px-3 py-2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            <select className="bg-background border border-card-border rounded-lg px-3 py-2" value={form.planType} onChange={(e) => setForm({ ...form, planType: e.target.value })}>
-              <option value="home">Home</option><option value="college">College</option><option value="wedding">Wedding</option><option value="car">Car</option><option value="sabbatical">Sabbatical</option><option value="custom">Custom</option>
-            </select>
-            <input type="date" className="bg-background border border-card-border rounded-lg px-3 py-2" value={form.targetDate} onChange={(e) => setForm({ ...form, targetDate: e.target.value })} />
+            <Input placeholder="Plan name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Select
+              options={[
+                { value: 'home', label: 'Home' },
+                { value: 'college', label: 'College' },
+                { value: 'wedding', label: 'Wedding' },
+                { value: 'car', label: 'Car' },
+                { value: 'sabbatical', label: 'Sabbatical' },
+                { value: 'custom', label: 'Custom' },
+              ]}
+              value={form.planType}
+              onChange={(e) => setForm({ ...form, planType: e.target.value })}
+            />
+            <Input type="date" value={form.targetDate} onChange={(e) => setForm({ ...form, targetDate: e.target.value })} />
           </div>
-          <button onClick={create} className="mt-4 px-4 py-2 bg-primary text-black rounded-lg font-medium">Create</button>
+          <Button className="mt-4" onClick={create} disabled={creating}>
+            {creating ? 'Creating…' : 'Create'}
+          </Button>
         </Card>
+      )}
+
+      {!isLoading && plans?.length === 0 && (
+        <EmptyState
+          icon={Map}
+          title="No life plans yet"
+          description="Create a plan for major milestones like buying a home or saving for college."
+          action={
+            <Button size="sm" onClick={() => setShowForm(true)}>
+              New Plan
+            </Button>
+          }
+        />
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">

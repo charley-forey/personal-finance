@@ -1,8 +1,10 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { PieChart as PieChartIcon } from 'lucide-react';
 import { PageHeader, Card } from '@/components/app-shell';
-import { Badge, DataTable, Skeleton } from '@/components/ui';
+import { PageLoading } from '@/components/page-states';
+import { Badge, DataTable, EmptyState, Skeleton, StatCard } from '@/components/ui';
 import { useHoldings } from '@/hooks/use-finance';
 import { useFormatCurrency } from '@/hooks/use-currency';
 import { api, type Holding } from '@/lib/api';
@@ -32,20 +34,31 @@ export default function InvestmentsPage() {
       <PageHeader title="Investments" description="Portfolio holdings and allocation vs 60/25/15 target" />
 
       <div className="grid gap-6 lg:grid-cols-2 mb-6">
-        <Card>
-          <p className="text-sm text-muted">Total Portfolio Value</p>
-          <p className="text-3xl font-bold tabular-nums mt-1">{formatCurrency(total)}</p>
-          {allocation && (
-            <p className="text-sm text-muted mt-2">
-              Drift score: <span className="text-foreground font-medium">{allocation.driftScore.toFixed(1)}%</span>
-              {allocation.driftScore > 10 && (
-                <Badge variant="warning" className="ml-2">Rebalance suggested</Badge>
-              )}
-            </p>
-          )}
-        </Card>
+        {isLoading ? (
+          <PageLoading variant="stats" count={1} className="lg:col-span-2" />
+        ) : (
+          <>
+            <StatCard
+              title="Total Portfolio Value"
+              value={formatCurrency(total)}
+              change={
+                allocation
+                  ? {
+                      value: `Drift: ${allocation.driftScore.toFixed(1)}%`,
+                      trend: allocation.driftScore > 10 ? 'down' : 'neutral',
+                    }
+                  : undefined
+              }
+            />
+            {allocation && allocation.driftScore > 10 && (
+              <Card className="flex items-center">
+                <Badge variant="warning">Rebalance suggested</Badge>
+              </Card>
+            )}
+          </>
+        )}
 
-        <Card title="Allocation vs Target (60/25/15)">
+        <Card title="Allocation vs Target (60/25/15)" className={isLoading ? 'lg:col-span-2' : undefined}>
           {isLoading ? (
             <Skeleton className="h-48 w-full" />
           ) : pieData.length > 0 ? (
@@ -76,12 +89,16 @@ export default function InvestmentsPage() {
               </div>
             </>
           ) : (
-            <p className="text-muted text-sm">No allocation data yet.</p>
+            <EmptyState
+              icon={PieChartIcon}
+              title="No allocation data"
+              description="Link an investment account to see portfolio allocation."
+            />
           )}
         </Card>
       </div>
 
-      {holdingsLoading && <p className="text-muted">Loading holdings...</p>}
+      {holdingsLoading && <PageLoading variant="table" count={4} className="mb-6" />}
 
       {!holdingsLoading && holdings && holdings.length > 0 && (
         <DataTable
@@ -110,7 +127,11 @@ export default function InvestmentsPage() {
       )}
 
       {holdings?.length === 0 && !holdingsLoading && (
-        <Card><p className="text-muted text-sm">No investment holdings synced. Link an investment account via Plaid.</p></Card>
+        <EmptyState
+          icon={PieChartIcon}
+          title="No holdings synced"
+          description="Link an investment account via Plaid to sync holdings and allocation."
+        />
       )}
     </div>
   );

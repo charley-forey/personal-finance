@@ -3,17 +3,33 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
+import { CreditCard, Sparkles } from 'lucide-react';
 import { PageHeader, Card } from '@/components/app-shell';
+import { PageLoading } from '@/components/page-states';
+import { Badge, Button, StatCard } from '@/components/ui';
 import { usePreferences, useBillingPlan } from '@/hooks/use-finance';
 import { api, clearAuthToken, type NotificationSettings } from '@/lib/api';
 import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
 
 const TIER_LABELS: Record<string, string> = {
   free: 'Free',
   pro: 'Pro',
   family: 'Family',
   advisor: 'Advisor',
+};
+
+const TIER_DESCRIPTIONS: Record<string, string> = {
+  free: 'Core tracking with limited AI and bank connections.',
+  pro: 'Unlimited AI insights and advanced forecasting.',
+  family: 'Shared household access for up to 5 members.',
+  advisor: 'White-glove support and advisor collaboration tools.',
+};
+
+const TIER_VARIANTS: Record<string, 'default' | 'primary' | 'success' | 'warning'> = {
+  free: 'default',
+  pro: 'primary',
+  family: 'success',
+  advisor: 'warning',
 };
 
 const DEFAULT_NOTIF: NotificationSettings = {
@@ -25,7 +41,7 @@ const DEFAULT_NOTIF: NotificationSettings = {
 
 export default function SettingsPage() {
   const { data: prefs, refetch } = usePreferences();
-  const { data: billing } = useBillingPlan();
+  const { data: billing, isLoading: billingLoading } = useBillingPlan();
   const { data: auditLogs, isLoading: auditLoading } = useQuery({
     queryKey: ['audit-logs'],
     queryFn: () => api.auditLogs(),
@@ -85,7 +101,14 @@ export default function SettingsPage() {
     }
   };
 
-  const tierLabel = TIER_LABELS[billing?.tier ?? 'free'] ?? billing?.tier ?? 'Free';
+  const tier = billing?.tier ?? 'free';
+  const tierLabel = TIER_LABELS[tier] ?? tier;
+  const banksLimit = billing?.limits.banks ?? 0;
+  const banksUsed = billing?.usage.banks ?? 0;
+  const aiUsed = billing?.usage.aiMessagesThisMonth ?? 0;
+  const aiLimit = billing?.aiMessagesLimit;
+  const banksPct = banksLimit > 0 && banksLimit < 999 ? Math.min((banksUsed / banksLimit) * 100, 100) : 0;
+  const aiPct = aiLimit ? Math.min((aiUsed / aiLimit) * 100, 100) : 0;
 
   return (
     <div>
@@ -155,32 +178,92 @@ export default function SettingsPage() {
         </Card>
 
         <Card title="Billing">
-          <div className="mt-2 space-y-2">
-            <p className="text-sm">
-              Current plan: <span className="font-semibold capitalize">{tierLabel}</span>
-            </p>
-            {billing && (
-              <ul className="text-sm text-muted space-y-1">
-                <li>Banks connected: {billing.usage.banks}{billing.limits.banks < 999 ? ` / ${billing.limits.banks}` : ''}</li>
-                <li>
-                  AI messages this month: {billing.usage.aiMessagesThisMonth}
-                  {billing.aiMessagesLimit != null ? ` / ${billing.aiMessagesLimit}` : ' (unlimited)'}
-                </li>
-              </ul>
-            )}
-            {billing?.tier === 'free' ? (
-              <Link
-                href="/pricing"
-                className="inline-block mt-3 px-4 py-2 bg-primary text-black rounded-lg font-medium text-sm"
-              >
-                Upgrade plan
-              </Link>
-            ) : (
-              <p className="text-sm text-muted mt-2">
-                Manage or change your plan on the <Link href="/pricing" className="text-primary">pricing page</Link>.
-              </p>
-            )}
-          </div>
+          {billingLoading ? (
+            <PageLoading variant="stats" count={3} className="mt-2" />
+          ) : (
+            <div className="mt-2 space-y-6">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    <span className="text-lg font-semibold">{tierLabel}</span>
+                    <Badge variant={TIER_VARIANTS[tier] ?? 'default'}>{tierLabel} plan</Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-muted">{TIER_DESCRIPTIONS[tier] ?? 'Your current subscription tier.'}</p>
+                </div>
+                {tier === 'free' && (
+                  <Link href="/pricing">
+                    <Button size="sm">
+                      <Sparkles className="h-4 w-4" />
+                      Upgrade plan
+                    </Button>
+                  </Link>
+                )}
+              </div>
+
+              {billing && (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <StatCard
+                      title="Banks connected"
+                      value={`${banksUsed}${banksLimit < 999 ? ` / ${banksLimit}` : ''}`}
+                      change={
+                        banksLimit < 999
+                          ? { value: `${Math.round(banksPct)}% of limit used`, trend: banksPct > 80 ? 'down' : 'neutral' }
+                          : undefined
+                      }
+                    />
+                    <StatCard
+                      title="AI messages this month"
+                      value={aiLimit != null ? `${aiUsed} / ${aiLimit}` : String(aiUsed)}
+                      change={
+                        aiLimit != null
+                          ? { value: `${Math.round(aiPct)}% of monthly limit`, trend: aiPct > 80 ? 'down' : 'neutral' }
+                          : { value: 'Unlimited on your plan', trend: 'up' }
+                      }
+                    />
+                  </div>
+
+                  {banksLimit < 999 && (
+                    <div>
+                      <div className="mb-1 flex justify-between text-xs text-muted">
+                        <span>Bank connections</span>
+                        <span>{banksUsed} / {banksLimit}</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-card-border">
+                        <div
+                          className={`h-full rounded-full ${banksPct > 80 ? 'bg-amber-500' : 'bg-primary'}`}
+                          style={{ width: `${banksPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {aiLimit != null && (
+                    <div>
+                      <div className="mb-1 flex justify-between text-xs text-muted">
+                        <span>AI messages</span>
+                        <span>{aiUsed} / {aiLimit}</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-card-border">
+                        <div
+                          className={`h-full rounded-full ${aiPct > 80 ? 'bg-amber-500' : 'bg-primary'}`}
+                          style={{ width: `${aiPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {tier !== 'free' && (
+                <p className="text-sm text-muted">
+                  Manage or change your plan on the{' '}
+                  <Link href="/pricing" className="text-primary hover:underline">pricing page</Link>.
+                </p>
+              )}
+            </div>
+          )}
         </Card>
 
         <Card title="Privacy & Compliance">
@@ -192,7 +275,7 @@ export default function SettingsPage() {
             <div>
               <h3 className="text-sm font-medium mb-2">Audit log</h3>
               {auditLoading ? (
-                <p className="text-sm text-muted">Loading audit logs…</p>
+                <PageLoading variant="table" count={4} />
               ) : !auditLogs?.length ? (
                 <p className="text-sm text-muted">No audit events recorded yet.</p>
               ) : (

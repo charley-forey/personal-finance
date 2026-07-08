@@ -1,23 +1,42 @@
 'use client';
 
-import { PageHeader, Card, StatCard } from '@/components/app-shell';
+import { PageHeader, Card } from '@/components/app-shell';
+import { PageError, PageLoading } from '@/components/page-states';
+import { StatCard } from '@/components/ui';
 import { useHealthScore } from '@/hooks/use-finance';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
 export default function HealthPage() {
-  const { data: h, isLoading } = useHealthScore();
+  const { data: h, isLoading, error } = useHealthScore();
   const { data: history } = useQuery({ queryKey: ['health-history'], queryFn: () => api.healthScoreHistory() });
 
-  if (isLoading || !h) return <p className="text-muted">Loading health score...</p>;
+  if (isLoading) {
+    return (
+      <div>
+        <PageHeader title="Financial Health" description="Composite score with improvement actions" />
+        <PageLoading variant="stats" count={1} className="mb-6" />
+        <PageLoading variant="cards" count={4} />
+      </div>
+    );
+  }
+
+  if (error || !h) {
+    return (
+      <div>
+        <PageHeader title="Financial Health" description="Composite score with improvement actions" />
+        <PageError message={error?.message ?? 'Unable to load health score.'} />
+      </div>
+    );
+  }
 
   return (
     <div>
       <PageHeader title="Financial Health" description="Composite score with improvement actions" />
-      <StatCard label="Overall Score" value={`${h.overall}/100`} />
+      <StatCard title="Overall Score" value={`${h.overall}/100`} className="max-w-xs" />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
         {Object.entries(h.subScores).map(([k, v]) => (
-          <Card key={k}><p className="text-xs text-muted capitalize">{k}</p><p className="text-xl font-bold">{Math.round(v)}</p></Card>
+          <StatCard key={k} title={k.replace(/_/g, ' ')} value={Math.round(v)} />
         ))}
       </div>
       <Card title="Improvement Actions" className="mt-6">

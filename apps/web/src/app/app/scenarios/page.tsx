@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PageHeader, Card, StatCard } from '@/components/app-shell';
-import { Badge, Button, DataTable, EmptyState, Input } from '@/components/ui';
+import { PageHeader, Card } from '@/components/app-shell';
+import { PageError, PageLoading } from '@/components/page-states';
+import { Badge, Button, DataTable, EmptyState, Input, StatCard } from '@/components/ui';
 import { api, formatCurrency, type Scenario } from '@/lib/api';
 import { FlaskConical } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -91,13 +92,13 @@ export default function ScenariosPage() {
       {selectedResult?.resultsJson && (
         <div className="mb-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-            <StatCard label="Ending Balance" value={formatCurrency(selectedResult.resultsJson.endingBalance)} />
-            <StatCard label="Min Balance" value={formatCurrency(selectedResult.resultsJson.minBalance)} />
-            <StatCard label="Total Net" value={formatCurrency(selectedResult.resultsJson.totalNet)} />
+            <StatCard title="Ending Balance" value={formatCurrency(selectedResult.resultsJson.endingBalance)} />
+            <StatCard title="Min Balance" value={formatCurrency(selectedResult.resultsJson.minBalance)} />
+            <StatCard title="Total Net" value={formatCurrency(selectedResult.resultsJson.totalNet)} />
             <StatCard
-              label="Outcome"
+              title="Outcome"
               value={selectedResult.resultsJson.success ? 'Sustainable' : 'Shortfall'}
-              change={selectedResult.resultsJson.success ? undefined : 'Cash runs negative'}
+              change={selectedResult.resultsJson.success ? undefined : { value: 'Cash runs negative', trend: 'down' }}
             />
           </div>
           <Card title={`Projection: ${selectedResult.name}`}>
@@ -113,13 +114,9 @@ export default function ScenariosPage() {
         </div>
       )}
 
-      {error && (
-        <Card className="mb-6 border-danger/50">
-          <p className="text-danger text-sm">{error.message}</p>
-        </Card>
-      )}
+      {error && <PageError message={error.message} />}
 
-      {isLoading && <p className="text-muted text-sm">Loading scenarios...</p>}
+      {isLoading && <PageLoading variant="table" count={4} className="mb-6" />}
 
       {!isLoading && scenarios?.length === 0 && (
         <EmptyState

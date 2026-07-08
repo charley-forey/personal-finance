@@ -1,5 +1,15 @@
 import { INTELLIGENCE_QUALITY_GATES, type RecommendationItem } from '@pf/shared';
 
+export { detectSpendingAnomalies, type SpendingAnomaly, type SpendingTransaction } from './anomaly';
+export { scorePersonalization, type FinancialProfileInput, type PersonalizationSignals } from './personalization';
+export { assignExperimentVariant, type ExperimentVariant } from './experiments';
+export {
+  recalibrateCategories,
+  scoreForecastAccuracy,
+  type RecalibrateCategoriesResult,
+  type ScoreForecastAccuracyResult,
+} from './learning-jobs';
+
 export interface RankInput {
   title: string;
   body?: string;

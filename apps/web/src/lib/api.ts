@@ -113,6 +113,17 @@ export const api = {
   categories: () => apiFetch<Category[]>('/categories'),
   categoryGroups: () => apiFetch<CategoryGroup[]>('/categories/groups'),
   inbox: () => apiFetch<InboxData>('/inbox'),
+  profile: async () => {
+    const res = await apiFetch<{ profile: FinancialProfile | null }>('/profile');
+    return res.profile;
+  },
+  updateProfile: async (data: Partial<FinancialProfile>) => {
+    const res = await apiFetch<{ profile: FinancialProfile }>('/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return res.profile;
+  },
   preferences: () => apiFetch<UserPreferences>('/preferences'),
   updatePreferences: (data: Partial<UserPreferences>) =>
     apiFetch<UserPreferences>('/preferences', { method: 'PUT', body: JSON.stringify(data) }),
@@ -417,6 +428,17 @@ export interface ManualAsset {
   acquisitionValue?: string;
   acquisitionDate?: string;
   updatedAt?: string;
+}
+
+export interface FinancialProfile {
+  id?: string;
+  lifeStage?: string;
+  riskTolerance?: string;
+  filingStatus?: string;
+  dependents?: number;
+  annualIncome?: string;
+  stateCode?: string;
+  goalsSummary?: string;
 }
 
 export interface TaxProfile {

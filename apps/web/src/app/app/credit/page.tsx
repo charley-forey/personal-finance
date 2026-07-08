@@ -1,17 +1,43 @@
 'use client';
 
+import { CreditCard } from 'lucide-react';
 import { PageHeader, Card } from '@/components/app-shell';
+import { PageError, PageLoading } from '@/components/page-states';
+import { EmptyState, StatCard } from '@/components/ui';
 import { useLiabilities } from '@/hooks/use-finance';
 import { formatCurrency } from '@/lib/api';
 
 export default function CreditPage() {
-  const { data: liabilities, isLoading } = useLiabilities();
+  const { data: liabilities, isLoading, error } = useLiabilities();
+
+  const totalMinPayment = (liabilities ?? []).reduce(
+    (sum, l) => sum + parseFloat(l.minimumPayment ?? '0'),
+    0,
+  );
+  const avgApr =
+    (liabilities ?? []).filter((l) => l.apr).length > 0
+      ? (liabilities ?? [])
+          .filter((l) => l.apr)
+          .reduce((sum, l) => sum + parseFloat(l.apr!), 0) /
+        (liabilities ?? []).filter((l) => l.apr).length
+      : 0;
 
   return (
     <div>
       <PageHeader title="Credit & Debt" description="Credit cards, loans, and payment schedules" />
 
-      {isLoading && <p className="text-muted">Loading...</p>}
+      {error && <PageError message={error.message} />}
+      {isLoading && <PageLoading variant="cards" count={2} className="mb-6" />}
+
+      {!isLoading && (liabilities?.length ?? 0) > 0 && (
+        <div className="mb-6 grid grid-cols-2 gap-4">
+          <StatCard title="Accounts" value={String(liabilities?.length ?? 0)} />
+          <StatCard title="Total Min Payment" value={formatCurrency(totalMinPayment)} />
+          {avgApr > 0 && (
+            <StatCard title="Avg APR" value={`${avgApr.toFixed(2)}%`} className="col-span-2 sm:col-span-1" />
+          )}
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         {(liabilities ?? []).map((l) => (
@@ -27,7 +53,11 @@ export default function CreditPage() {
       </div>
 
       {liabilities?.length === 0 && !isLoading && (
-        <Card><p className="text-muted text-sm">No liabilities synced. Link credit or loan accounts via Plaid.</p></Card>
+        <EmptyState
+          icon={CreditCard}
+          title="No liabilities synced"
+          description="Link credit or loan accounts via Plaid to track balances and payment schedules."
+        />
       )}
     </div>
   );

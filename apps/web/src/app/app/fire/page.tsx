@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PageHeader, Card } from '@/components/app-shell';
+import { PageError } from '@/components/page-states';
 import { Skeleton, StatCard } from '@/components/ui';
 import { api } from '@/lib/api';
 import { calculateFIRE, generateFireProjection } from '@/lib/fire';
@@ -65,7 +66,7 @@ export default function FirePage() {
   const [netWorth, setNetWorth] = useState(100000);
   const [initialized, setInitialized] = useState(false);
 
-  const { data: fireDefaults, isLoading } = useQuery({
+  const { data: fireDefaults, isLoading, error } = useQuery({
     queryKey: ['fire-defaults'],
     queryFn: async () => {
       const [fire, nw, cf] = await Promise.all([api.fire(), api.netWorth(), api.cashFlow()]);
@@ -100,6 +101,8 @@ export default function FirePage() {
         title="FIRE Calculator"
         description="Financial Independence / Retire Early — adjust assumptions to see your path"
       />
+
+      {error && <PageError message={error.message} className="mb-6" />}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card title="Assumptions" className="lg:col-span-1">

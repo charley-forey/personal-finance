@@ -1,9 +1,10 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell } from 'lucide-react';
+import { Bell, CheckCheck } from 'lucide-react';
 import { PageHeader, Card } from '@/components/app-shell';
-import { Badge, Button, EmptyState, Skeleton } from '@/components/ui';
+import { PageError, PageLoading } from '@/components/page-states';
+import { Badge, Button, EmptyState } from '@/components/ui';
 import { api, type Notification } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 
@@ -39,7 +40,7 @@ function NotificationCard({
             disabled={marking}
             onClick={() => onMarkRead(notification.id)}
           >
-            Mark read
+            {marking ? 'Marking…' : 'Mark read'}
           </Button>
         )}
       </div>
@@ -93,6 +94,13 @@ export default function NotificationsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
+  const markAllRead = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map((id) => api.markNotificationRead(id)));
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+
   const unread = (notifications ?? []).filter((n) => !n.readAt);
   const read = (notifications ?? []).filter((n) => n.readAt);
 
@@ -103,23 +111,24 @@ export default function NotificationsPage() {
         description="Alerts and reminders"
         actions={
           unread.length > 0 ? (
-            <Badge variant="warning">{unread.length} unread</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="warning">{unread.length} unread</Badge>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={markAllRead.isPending}
+                onClick={() => markAllRead.mutate(unread.map((n) => n.id))}
+              >
+                <CheckCheck className="h-4 w-4" />
+                {markAllRead.isPending ? 'Marking all…' : 'Mark all read'}
+              </Button>
+            </div>
           ) : undefined
         }
       />
 
-      {error && (
-        <Card className="mb-6 border-danger/50">
-          <p className="text-danger text-sm">{error.message}</p>
-        </Card>
-      )}
-
-      {isLoading && (
-        <div className="space-y-3">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </div>
-      )}
+      {error && <PageError message={error.message} />}
+      {isLoading && <PageLoading variant="list" count={3} />}
 
       {!isLoading && !error && notifications?.length === 0 && (
         <EmptyState

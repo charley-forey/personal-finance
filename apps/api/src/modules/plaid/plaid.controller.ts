@@ -8,10 +8,11 @@ import {
   Headers,
   Inject,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import type { Database } from '@pf/database';
 import { plaidItems } from '@pf/database';
 import { AuthGuard, Public, getAuth, RequireRoles } from '../../common/auth.guard';
@@ -82,5 +83,47 @@ export class PlaidController {
   async triggerSync(@Req() req: { auth?: ReturnType<typeof getAuth> }, @Param('id') id: string) {
     const auth = getAuth(req);
     return this.plaid.enqueueSync(id, auth.orgId);
+  }
+
+  @Get('plaid/items/:id/health')
+  async itemHealth(@Req() req: { auth?: ReturnType<typeof getAuth> }, @Param('id') id: string) {
+    const auth = getAuth(req);
+    const [item] = await this.db
+      .select({
+        id: plaidItems.id,
+        institutionName: plaidItems.institutionName,
+        syncStatus: plaidItems.syncStatus,
+        lastSyncedAt: plaidItems.lastSyncedAt,
+        loginRequired: plaidItems.loginRequired,
+        errorCode: plaidItems.errorCode,
+        consentExpiresAt: plaidItems.consentExpiresAt,
+        createdAt: plaidItems.createdAt,
+      })
+      .from(plaidItems)
+      .where(and(eq(plaidItems.id, id), eq(plaidItems.orgId, auth.orgId)))
+      .limit(1);
+
+    if (!item) {
+      throw new NotFoundException('Plaid item not found');
+    }
+
+    const healthy =
+      item.syncStatus === 'success' && !item.loginRequired && !item.errorCode;
+
+    return {
+      itemId: item.id,
+      institutionName: item.institutionName,
+      syncStatus: item.syncStatus,
+      lastSyncedAt: item.lastSyncedAt,
+      loginRequired: item.loginRequired,
+      error: item.errorCode
+        ? { code: item.errorCode, message: item.errorCode }
+        : null,
+      consentExpiresAt: item.consentExpiresAt,
+      healthy,
+      stale: item.lastSyncedAt
+        ? Date.now() - item.lastSyncedAt.getTime() > 24 * 60 * 60 * 1000
+        : true,
+    };
   }
 }

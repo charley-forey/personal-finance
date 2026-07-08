@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PageHeader, Card } from '@/components/app-shell';
-import { Badge, Button, Input, Select, Skeleton, StatCard } from '@/components/ui';
+import { PageError } from '@/components/page-states';
+import { Badge, Button, EmptyState, Input, Select, Skeleton, StatCard } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/format';
 
@@ -93,11 +94,7 @@ export default function TaxesPage() {
         }
       />
 
-      {error && (
-        <Card className="mb-6 border-danger/50">
-          <p className="text-danger text-sm">{error.message}</p>
-        </Card>
-      )}
+      {error && <PageError message={error.message} />}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Tax Profile">
@@ -172,7 +169,14 @@ export default function TaxesPage() {
                 <StatCard title="Next Quarterly Payment" value={formatCurrency(estimate.quarterlyPayment)} />
                 <StatCard title="Effective Rate" value={`${(estimate.effectiveRate * 100).toFixed(1)}%`} />
               </>
-            ) : null}
+            ) : (
+              <div className="col-span-2">
+                <EmptyState
+                  title="No estimate available"
+                  description="Save your tax profile to generate a YTD estimate for the selected year."
+                />
+              </div>
+            )}
           </div>
 
           {estimate && (

@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { eq, and } from 'drizzle-orm';
-import { categories, categoryGroups, categoryRules } from '@pf/database';
+import { categories, categoryGroups, categoryRules, categorizationCorrections, domainEvents } from '@pf/database';
+import { EVENT_TYPES } from '@pf/events';
 import { DATABASE } from '../database.module';
 import type { Database } from '@pf/database';
 import { seedDefaultCategories, categorizeOrgTransactions, getInboxItems } from '@pf/sync';
@@ -56,5 +57,46 @@ export class CategoryService {
 
   async getInbox(orgId: string) {
     return getInboxItems(this.db, orgId);
+  }
+
+  async recordCategorizationCorrection(
+    orgId: string,
+    userId: string,
+    data: {
+      transactionId: string;
+      priorCategoryId: string | null;
+      newCategoryId: string;
+      merchantName?: string | null;
+    },
+  ) {
+    const [correction] = await this.db
+      .insert(categorizationCorrections)
+      .values({
+        orgId,
+        userId,
+        transactionId: data.transactionId,
+        priorCategoryId: data.priorCategoryId,
+        newCategoryId: data.newCategoryId,
+        merchantName: data.merchantName,
+      })
+      .returning();
+
+    await this.db.insert(domainEvents).values({
+      orgId,
+      eventType: EVENT_TYPES.CATEGORY_CORRECTED,
+      aggregateType: 'transaction',
+      aggregateId: data.transactionId,
+      payloadJson: {
+        correctionId: correction.id,
+        transactionId: data.transactionId,
+        priorCategoryId: data.priorCategoryId,
+        newCategoryId: data.newCategoryId,
+        merchantName: data.merchantName,
+        userId,
+      },
+      metadataJson: { userId, source: 'category.service' },
+    });
+
+    return correction;
   }
 }

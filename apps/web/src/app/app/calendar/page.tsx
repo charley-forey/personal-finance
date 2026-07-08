@@ -1,8 +1,10 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { PageHeader, Card, StatCard } from '@/components/app-shell';
-import { Badge, DataTable, Skeleton } from '@/components/ui';
+import { CalendarDays } from 'lucide-react';
+import { PageHeader, Card } from '@/components/app-shell';
+import { PageError, PageLoading } from '@/components/page-states';
+import { Badge, DataTable, EmptyState, StatCard } from '@/components/ui';
 import { api, formatCurrency, type BillEvent } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 
@@ -26,27 +28,20 @@ export default function CalendarPage() {
         description="Recurring bills and debt payments over the next 30 days"
       />
 
-      {error && (
-        <Card className="mb-6 border-danger/50">
-          <p className="text-danger text-sm">{error.message}</p>
-        </Card>
-      )}
+      {error && <PageError message={error.message} />}
 
       <div className="grid grid-cols-2 gap-4 mb-6">
         {isLoading ? (
-          <>
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-          </>
+          <PageLoading variant="stats" count={2} />
         ) : (
           <>
-            <StatCard label="Total Due (30 days)" value={formatCurrency(data?.totalDue ?? 0)} />
-            <StatCard label="Upcoming Bills" value={String(data?.events.length ?? 0)} />
+            <StatCard title="Total Due (30 days)" value={formatCurrency(data?.totalDue ?? 0)} />
+            <StatCard title="Upcoming Bills" value={String(data?.events.length ?? 0)} />
           </>
         )}
       </div>
 
-      {isLoading && <p className="text-muted text-sm">Loading calendar...</p>}
+      {isLoading && <PageLoading variant="list" count={4} className="mb-8" />}
 
       {!isLoading && sortedDates.length > 0 && (
         <div className="space-y-4 mb-8">
@@ -70,7 +65,15 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {!isLoading && data && (
+      {!isLoading && data?.events.length === 0 && (
+        <EmptyState
+          icon={CalendarDays}
+          title="No bills due"
+          description="No recurring bills or debt payments due in the next 30 days."
+        />
+      )}
+
+      {!isLoading && data && data.events.length > 0 && (
         <DataTable
           data={data.events}
           keyExtractor={(e) => `${e.sourceId}-${e.date}-${e.type}`}

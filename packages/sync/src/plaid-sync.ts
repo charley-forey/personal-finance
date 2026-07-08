@@ -367,18 +367,6 @@ export async function syncPlaidItem(
 }
 
 export async function processDomainEvents(db: Database, limit = 50) {
-  const events = await db
-    .select()
-    .from(domainEvents)
-    .where(isNull(domainEvents.processedAt))
-    .limit(limit);
-
-  for (const event of events) {
-    await db
-      .update(domainEvents)
-      .set({ processedAt: new Date() })
-      .where(eq(domainEvents.id, event.id));
-  }
-
-  return events.length;
+  const { processPendingDomainEvents } = await import('@pf/data-pipeline');
+  return processPendingDomainEvents(db, limit);
 }

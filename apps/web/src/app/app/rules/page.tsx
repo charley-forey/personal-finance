@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PageHeader, Card } from '@/components/app-shell';
+import { PageError, PageLoading } from '@/components/page-states';
 import { Badge, Button, DataTable, EmptyState, Input, Select } from '@/components/ui';
 import { api, type AutomationRule } from '@/lib/api';
 import { Bot } from 'lucide-react';
@@ -92,13 +93,9 @@ export default function RulesPage() {
         </Card>
       )}
 
-      {error && (
-        <Card className="mb-6 border-danger/50">
-          <p className="text-danger text-sm">{error.message}</p>
-        </Card>
-      )}
+      {error && <PageError message={error.message} />}
 
-      {isLoading && <p className="text-muted text-sm">Loading rules...</p>}
+      {isLoading && <PageLoading variant="table" count={4} className="mb-6" />}
 
       {!isLoading && rules?.length === 0 && (
         <EmptyState

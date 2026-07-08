@@ -1,11 +1,36 @@
 'use client';
 
+import { useState } from 'react';
+import { Lightbulb, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { PageHeader, Card } from '@/components/app-shell';
+import { PageError, PageLoading } from '@/components/page-states';
+import { Button, EmptyState } from '@/components/ui';
 import { useInsights, useGenerateInsight } from '@/hooks/use-finance';
+import { api } from '@/lib/api';
 
 export default function InsightsPage() {
-  const { data: insights, isLoading } = useInsights();
+  const { data: insights, isLoading, error, refetch } = useInsights();
   const generate = useGenerateInsight();
+  const [feedbackBusy, setFeedbackBusy] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+
+  const submitFeedback = async (
+    id: string,
+    data: { helpful?: boolean; dismissed?: boolean },
+  ) => {
+    setFeedbackBusy(id);
+    try {
+      await api.insightFeedback(id, data);
+      if (data.dismissed) {
+        setDismissed((prev) => new Set(prev).add(id));
+      }
+      await refetch();
+    } finally {
+      setFeedbackBusy(null);
+    }
+  };
+
+  const visible = (insights ?? []).filter((i) => !dismissed.has(i.id));
 
   return (
     <div>
@@ -13,28 +38,68 @@ export default function InsightsPage() {
         title="Insights"
         description="AI-generated financial insights"
         actions={
-          <button
+          <Button
             onClick={() => generate.mutate()}
             disabled={generate.isPending}
-            className="px-4 py-2 bg-primary text-black rounded-lg font-medium text-sm disabled:opacity-50"
+            size="sm"
           >
-            {generate.isPending ? 'Generating...' : 'Generate Insight'}
-          </button>
+            {generate.isPending ? 'Generating…' : 'Generate Insight'}
+          </Button>
         }
       />
 
-      {isLoading && <p className="text-muted">Loading insights...</p>}
+      {error && <PageError message={error.message} />}
+      {isLoading && <PageLoading variant="list" count={3} className="mb-6" />}
 
       <div className="space-y-4">
-        {(insights ?? []).map((i) => (
+        {visible.map((i) => (
           <Card key={i.id}>
             <span className="text-xs text-primary uppercase">{i.insightType}</span>
             <p className="font-medium mt-1">{i.title}</p>
             <p className="text-sm text-muted mt-2">{i.body}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={feedbackBusy === i.id}
+                onClick={() => submitFeedback(i.id, { helpful: true })}
+              >
+                <ThumbsUp className="h-3.5 w-3.5" />
+                Helpful
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={feedbackBusy === i.id}
+                onClick={() => submitFeedback(i.id, { helpful: false })}
+              >
+                <ThumbsDown className="h-3.5 w-3.5" />
+                Not helpful
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={feedbackBusy === i.id}
+                onClick={() => submitFeedback(i.id, { dismissed: true })}
+              >
+                <X className="h-3.5 w-3.5" />
+                Dismiss
+              </Button>
+            </div>
           </Card>
         ))}
-        {insights?.length === 0 && !isLoading && (
-          <Card><p className="text-muted text-sm">No insights yet. Link accounts or generate one.</p></Card>
+
+        {!isLoading && visible.length === 0 && (
+          <EmptyState
+            icon={Lightbulb}
+            title="No insights yet"
+            description="Link accounts or generate an insight to get personalized recommendations."
+            action={
+              <Button onClick={() => generate.mutate()} disabled={generate.isPending}>
+                {generate.isPending ? 'Generating…' : 'Generate Insight'}
+              </Button>
+            }
+          />
         )}
       </div>
     </div>

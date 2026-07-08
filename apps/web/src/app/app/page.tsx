@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 import { Inbox, Wallet } from 'lucide-react';
 import { PageHeader, Card } from '@/components/app-shell';
 import { Badge, EmptyState, Skeleton, StatCard } from '@/components/ui';
+import { PageError } from '@/components/page-states';
 import {
   useAccounts,
   useCashFlow,
@@ -164,11 +165,7 @@ export default function DashboardPage() {
         }
       />
 
-      {nwError && (
-        <Card className="mb-6 border-danger/50">
-          <p className="text-danger text-sm">{nwError.message}</p>
-        </Card>
-      )}
+      {nwError && <PageError message={nwError.message} />}
 
       {!accountsLoading && !hasAccounts && (
         <EmptyState

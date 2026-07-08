@@ -4,3 +4,4 @@ export { UpdateTransactionDto } from './update-transaction.dto';
 export { AgentChatDto } from './agent-chat.dto';
 export { CheckoutDto } from './checkout.dto';
 export { CreateGoalDto } from './create-goal.dto';
+export { UpdateProfileDto } from './update-profile.dto';

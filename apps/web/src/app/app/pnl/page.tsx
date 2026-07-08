@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PageHeader, Card } from '@/components/app-shell';
-import { Badge, Button, Select } from '@/components/ui';
+import { PageError, PageLoading } from '@/components/page-states';
+import { Badge, Button, EmptyState, Select } from '@/components/ui';
 import { api, formatCurrency, type PnlData } from '@/lib/api';
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => ({
@@ -134,13 +135,16 @@ export default function PnlPage() {
         />
       </div>
 
-      {error && (
-        <Card className="mb-6 border-danger/50">
-          <p className="text-danger text-sm">{error.message}</p>
-        </Card>
-      )}
+      {error && <PageError message={error.message} />}
 
-      {isLoading && <p className="text-muted text-sm">Loading {periodLabel}...</p>}
+      {isLoading && <PageLoading variant="table" count={6} className="mb-6" />}
+
+      {!isLoading && !error && !data && (
+        <EmptyState
+          title="No P&L data"
+          description={`No profit and loss data available for ${periodLabel}.`}
+        />
+      )}
 
       {data && <PnlGrid data={data} yoyHint={yoyHint} />}
     </div>

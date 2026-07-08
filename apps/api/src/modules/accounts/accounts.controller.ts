@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body, Param, Query, Req, Inject } from '@nestjs/common';
+import { Controller, Get, Patch, Body, Param, Query, Req, Inject, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { eq, desc, and, or, ilike } from 'drizzle-orm';
 import type { Database } from '@pf/database';
@@ -6,12 +6,16 @@ import { accounts, transactions } from '@pf/database';
 import { AuthGuard, getAuth, RequireRoles } from '../../common/auth.guard';
 import { DATABASE } from '../../database.module';
 import { UpdateTransactionDto } from '../../dto';
+import { CategoryService } from '../../services/category.service';
 
 @ApiTags('accounts')
 @Controller()
 @ApiBearerAuth()
 export class AccountsController {
-  constructor(@Inject(DATABASE) private db: Database) {}
+  constructor(
+    @Inject(DATABASE) private db: Database,
+    private categories: CategoryService,
+  ) {}
 
   @Get('accounts')
   async listAccounts(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
@@ -66,11 +70,34 @@ export class AccountsController {
     @Body() body: UpdateTransactionDto,
   ) {
     const auth = getAuth(req);
+    const [existing] = await this.db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.id, id), eq(transactions.orgId, auth.orgId)))
+      .limit(1);
+
+    if (!existing) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    const categoryChanged =
+      body.categoryId !== undefined && body.categoryId !== existing.categoryId;
+
     const [updated] = await this.db
       .update(transactions)
       .set({ ...body, updatedAt: new Date() })
       .where(and(eq(transactions.id, id), eq(transactions.orgId, auth.orgId)))
       .returning();
+
+    if (categoryChanged && body.categoryId) {
+      await this.categories.recordCategorizationCorrection(auth.orgId, auth.userId, {
+        transactionId: id,
+        priorCategoryId: existing.categoryId,
+        newCategoryId: body.categoryId,
+        merchantName: existing.merchantName ?? existing.name,
+      });
+    }
+
     return updated;
   }
 }

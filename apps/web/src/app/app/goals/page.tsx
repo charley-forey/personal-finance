@@ -1,12 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import { Target } from 'lucide-react';
 import { PageHeader, Card } from '@/components/app-shell';
+import { PageLoading } from '@/components/page-states';
+import { Button, EmptyState, Input, Select } from '@/components/ui';
 import { useGoals, useCreateGoal } from '@/hooks/use-finance';
 import { formatCurrency } from '@/lib/api';
 
 export default function GoalsPage() {
-  const { data: goals } = useGoals();
+  const { data: goals, isLoading } = useGoals();
   const createGoal = useCreateGoal();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', targetAmount: '', goalType: 'custom' });
@@ -17,31 +20,51 @@ export default function GoalsPage() {
         title="Goals"
         description="Track progress toward financial milestones"
         actions={
-          <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-primary text-black rounded-lg font-medium text-sm">
+          <Button size="sm" onClick={() => setShowForm(!showForm)}>
             {showForm ? 'Cancel' : 'New Goal'}
-          </button>
+          </Button>
         }
       />
+
+      {isLoading && <PageLoading variant="cards" count={2} className="mb-6" />}
 
       {showForm && (
         <Card className="mb-6">
           <div className="grid gap-4 sm:grid-cols-3">
-            <input placeholder="Goal name" className="bg-background border border-card-border rounded-lg px-3 py-2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            <input type="number" placeholder="Target amount" className="bg-background border border-card-border rounded-lg px-3 py-2" value={form.targetAmount} onChange={(e) => setForm({ ...form, targetAmount: e.target.value })} />
-            <select className="bg-background border border-card-border rounded-lg px-3 py-2" value={form.goalType} onChange={(e) => setForm({ ...form, goalType: e.target.value })}>
-              <option value="emergency_fund">Emergency Fund</option>
-              <option value="retirement">Retirement</option>
-              <option value="house">House</option>
-              <option value="custom">Custom</option>
-            </select>
+            <Input placeholder="Goal name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Input type="number" placeholder="Target amount" value={form.targetAmount} onChange={(e) => setForm({ ...form, targetAmount: e.target.value })} />
+            <Select
+              options={[
+                { value: 'emergency_fund', label: 'Emergency Fund' },
+                { value: 'retirement', label: 'Retirement' },
+                { value: 'house', label: 'House' },
+                { value: 'custom', label: 'Custom' },
+              ]}
+              value={form.goalType}
+              onChange={(e) => setForm({ ...form, goalType: e.target.value })}
+            />
           </div>
-          <button
+          <Button
+            className="mt-4"
+            disabled={createGoal.isPending}
             onClick={() => { createGoal.mutate(form); setShowForm(false); }}
-            className="mt-4 px-4 py-2 bg-primary text-black rounded-lg font-medium"
           >
-            Create Goal
-          </button>
+            {createGoal.isPending ? 'Creating…' : 'Create Goal'}
+          </Button>
         </Card>
+      )}
+
+      {!isLoading && goals?.length === 0 && (
+        <EmptyState
+          icon={Target}
+          title="No goals yet"
+          description="Set a savings goal to track your progress toward milestones."
+          action={
+            <Button size="sm" onClick={() => setShowForm(true)}>
+              New Goal
+            </Button>
+          }
+        />
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">

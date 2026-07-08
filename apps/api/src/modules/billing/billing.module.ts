@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../database.module';
-import { BillingService } from '../../services/platform.services';
+import { BillingService } from '../../services/billing.service';
 import { BillingController } from './billing.controller';
 import { PlanLimitsGuard } from './plan-limits.guard';
 

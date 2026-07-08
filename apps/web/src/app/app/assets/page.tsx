@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Pencil, Trash2 } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
-import { Button, DataTable, EmptyState, Input, Modal, Select } from '@/components/ui';
+import { PageHeader } from '@/components/app-shell';
+import { PageError, PageLoading } from '@/components/page-states';
+import { Button, DataTable, EmptyState, Input, Modal, Select, StatCard } from '@/components/ui';
 import { api, type ManualAsset } from '@/lib/api';
 import { formatCurrency } from '@/lib/format';
 
@@ -77,6 +78,8 @@ export default function AssetsPage() {
     setForm(emptyForm);
   }
 
+  const totalValue = (assets ?? []).reduce((sum, a) => sum + parseFloat(String(a.currentValue ?? 0)), 0);
+
   const modalOpen = showCreate || editing !== null;
   const saving = createAsset.isPending || updateAsset.isPending;
 
@@ -92,13 +95,16 @@ export default function AssetsPage() {
         }
       />
 
-      {error && (
-        <Card className="mb-6 border-danger/50">
-          <p className="text-danger text-sm">{error.message}</p>
-        </Card>
-      )}
+      {error && <PageError message={error.message} />}
 
-      {isLoading && <p className="text-muted text-sm">Loading assets...</p>}
+      {isLoading && <PageLoading variant="table" count={4} className="mb-6" />}
+
+      {!isLoading && (assets?.length ?? 0) > 0 && (
+        <div className="mb-6 grid grid-cols-2 gap-4 max-w-md">
+          <StatCard title="Assets" value={String(assets?.length ?? 0)} />
+          <StatCard title="Total Value" value={formatCurrency(totalValue)} />
+        </div>
+      )}
 
       {!isLoading && !error && assets?.length === 0 && (
         <EmptyState

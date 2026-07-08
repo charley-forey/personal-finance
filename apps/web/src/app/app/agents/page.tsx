@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { PageHeader, Card } from '@/components/app-shell';
+import { PageLoading } from '@/components/page-states';
+import { Button } from '@/components/ui';
 import { api, type AgentConversation } from '@/lib/api';
 import { Bot, MessageSquare, Plus, Sparkles } from 'lucide-react';
 
@@ -79,10 +81,15 @@ export default function AgentsPage() {
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [conversations, setConversations] = useState<AgentConversation[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingConversations, setLoadingConversations] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
-    api.agentConversations().then(setConversations).catch(() => {});
+    api
+      .agentConversations()
+      .then(setConversations)
+      .catch(() => {})
+      .finally(() => setLoadingConversations(false));
   }, []);
 
   function startNewChat() {
@@ -132,58 +139,60 @@ export default function AgentsPage() {
       <div className="flex gap-6">
         {sidebarOpen && (
           <aside className="w-64 shrink-0 hidden md:block">
-            <button
-              onClick={startNewChat}
-              className="w-full flex items-center gap-2 px-4 py-2 mb-4 bg-primary text-black rounded-lg text-sm font-medium"
-            >
+            <Button className="w-full mb-4" size="sm" onClick={startNewChat}>
               <Plus className="w-4 h-4" /> New chat
-            </button>
-            <div className="space-y-1">
-              {conversations.map((conv) => (
-                <button
-                  key={conv.id}
-                  onClick={() => loadConversation(conv)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm truncate ${
-                    conversationId === conv.id
-                      ? 'bg-primary/20 border border-primary/30'
-                      : 'hover:bg-card border border-transparent'
-                  }`}
-                >
-                  <span className="text-xs text-muted block capitalize">
-                    {conv.agentType.replace(/_/g, ' ')}
-                  </span>
-                  {conversationPreview(conv)}
-                </button>
-              ))}
-              {conversations.length === 0 && (
-                <p className="text-xs text-muted px-3">No conversations yet</p>
-              )}
-            </div>
+            </Button>
+            {loadingConversations ? (
+              <PageLoading variant="list" count={3} />
+            ) : (
+              <div className="space-y-1">
+                {conversations.map((conv) => (
+                  <Button
+                    key={conv.id}
+                    variant={conversationId === conv.id ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className={`w-full justify-start truncate ${
+                      conversationId === conv.id ? 'border border-primary/30 bg-primary/20' : ''
+                    }`}
+                    onClick={() => loadConversation(conv)}
+                  >
+                    <span className="text-xs text-muted block capitalize w-full text-left">
+                      {conv.agentType.replace(/_/g, ' ')}
+                    </span>
+                    <span className="truncate w-full text-left">{conversationPreview(conv)}</span>
+                  </Button>
+                ))}
+                {conversations.length === 0 && (
+                  <p className="text-xs text-muted px-3">No conversations yet</p>
+                )}
+              </div>
+            )}
           </aside>
         )}
 
         <div className="flex-1 min-w-0">
           <div className="flex gap-2 mb-4 flex-wrap">
             {AGENTS.map((a) => (
-              <button
+              <Button
                 key={a.id}
+                variant={agentType === a.id ? 'primary' : 'secondary'}
+                size="sm"
                 onClick={() => {
                   setAgentType(a.id);
                   startNewChat();
                 }}
-                className={`px-4 py-2 rounded-lg text-sm ${
-                  agentType === a.id ? 'bg-primary text-black' : 'bg-card border border-card-border'
-                }`}
               >
                 {a.name}
-              </button>
+              </Button>
             ))}
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
+              className="md:hidden"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden px-3 py-2 rounded-lg text-sm bg-card border border-card-border"
             >
               History
-            </button>
+            </Button>
           </div>
 
           <p className="text-sm text-muted mb-4">{selectedAgent.description}</p>
@@ -212,14 +221,16 @@ export default function AgentsPage() {
                 <p className="text-sm text-muted mb-3">Suggested prompts</p>
                 <div className="flex flex-wrap gap-2">
                   {prompts.map((p) => (
-                    <button
+                    <Button
                       key={p}
-                      onClick={() => send(p)}
+                      variant="secondary"
+                      size="sm"
                       disabled={loading}
-                      className="px-3 py-2 text-sm rounded-lg bg-background border border-card-border hover:border-primary/50 text-left"
+                      className="text-left h-auto whitespace-normal py-2"
+                      onClick={() => send(p)}
                     >
                       {p}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -237,13 +248,13 @@ export default function AgentsPage() {
               placeholder="Ask about your finances..."
               className="w-full h-24 bg-background border border-card-border rounded-lg p-3 text-sm"
             />
-            <button
+            <Button
+              className="mt-4"
               onClick={() => send()}
               disabled={loading || !message}
-              className="mt-4 px-4 py-2 bg-primary text-black rounded-lg font-medium disabled:opacity-50"
             >
-              {loading ? 'Thinking...' : 'Send'}
-            </button>
+              {loading ? 'Thinking…' : 'Send'}
+            </Button>
           </Card>
         </div>
       </div>

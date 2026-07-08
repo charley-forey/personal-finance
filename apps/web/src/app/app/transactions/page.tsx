@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Download } from 'lucide-react';
-import { PageHeader } from '@/components/app-shell';
-import { Button, DataTable, Input, Skeleton } from '@/components/ui';
+import Link from 'next/link';
+import { Download, Tag } from 'lucide-react';
+import { PageHeader, Card } from '@/components/app-shell';
+import { PageError } from '@/components/page-states';
+import { Button, DataTable, EmptyState, Input, Skeleton } from '@/components/ui';
 import type { DataTableColumn } from '@/components/ui';
 import { useTransactionsSearch } from '@/hooks/use-finance';
 import { useFormatCurrency } from '@/hooks/use-currency';
@@ -90,7 +92,7 @@ export default function TransactionsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data: txns, isLoading, isFetching } = useTransactionsSearch(200, debouncedSearch);
+  const { data: txns, isLoading, isFetching, error } = useTransactionsSearch(200, debouncedSearch);
 
   const exportable = useMemo(() => txns ?? [], [txns]);
 
@@ -112,6 +114,22 @@ export default function TransactionsPage() {
         }
       />
 
+      <Card className="mb-6 border-primary/20 bg-primary/5">
+        <div className="flex gap-3">
+          <Tag className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div className="text-sm">
+            <p className="font-medium text-foreground">Need to fix a category?</p>
+            <p className="mt-1 text-muted">
+              Miscategorized transactions can be corrected in your{' '}
+              <Link href="/app/inbox" className="text-primary hover:underline">
+                Transaction Inbox
+              </Link>
+              . Select a category from the dropdown on any uncategorized item.
+            </p>
+          </div>
+        </div>
+      </Card>
+
       <div className="mb-6 max-w-md">
         <Input
           type="search"
@@ -124,22 +142,42 @@ export default function TransactionsPage() {
         )}
       </div>
 
+      {error && <PageError message={error.message} />}
+
       {isLoading ? (
         <div className="space-y-2">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
         </div>
+      ) : exportable.length === 0 ? (
+        <EmptyState
+          icon={Tag}
+          title={debouncedSearch ? 'No matching transactions' : 'No transactions yet'}
+          description={
+            debouncedSearch
+              ? `Nothing matched "${debouncedSearch}". Try a different search term.`
+              : 'Link a bank account to sync your transaction history.'
+          }
+          action={
+            debouncedSearch ? (
+              <Button variant="secondary" size="sm" onClick={() => setSearch('')}>
+                Clear search
+              </Button>
+            ) : (
+              <Link href="/app/accounts">
+                <Button variant="secondary" size="sm">
+                  Link accounts
+                </Button>
+              </Link>
+            )
+          }
+        />
       ) : (
         <DataTable
           columns={columns}
           data={exportable}
           keyExtractor={(t) => t.id}
-          emptyMessage={
-            debouncedSearch
-              ? `No transactions matching "${debouncedSearch}".`
-              : 'No transactions found.'
-          }
         />
       )}
     </div>

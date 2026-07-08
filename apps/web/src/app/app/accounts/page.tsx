@@ -2,7 +2,8 @@
 
 import { AlertTriangle } from 'lucide-react';
 import { PageHeader, Card } from '@/components/app-shell';
-import { Badge, EmptyState, Skeleton } from '@/components/ui';
+import { PageError, PageLoading } from '@/components/page-states';
+import { Badge, EmptyState } from '@/components/ui';
 import { PlaidLinkButton } from '@/components/plaid-link-button';
 import { useAccounts, usePlaidItems } from '@/hooks/use-finance';
 import type { Account, PlaidItem } from '@/lib/api';
@@ -88,18 +89,10 @@ export default function AccountsPage() {
         </Card>
       )}
 
-      {isLoading && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-        </div>
-      )}
+      {error && <PageError message={error.message} className="mb-4" />}
 
-      {error && (
-        <Card className="mb-4">
-          <p className="text-red-400 text-sm">{error.message}</p>
-        </Card>
+      {isLoading && (
+        <PageLoading variant="cards" count={3} className="mb-6" />
       )}
 
       {sortedTypes.map((type) => (

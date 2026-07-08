@@ -1,0 +1,19 @@
+{
+  "name": "@pf/data-pipeline",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pf/database": "*",
+    "@pf/events": "*",
+    "drizzle-orm": "^0.38.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

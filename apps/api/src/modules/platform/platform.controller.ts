@@ -31,6 +31,7 @@ import {
 } from '@pf/database';
 import { AuthGuard, getAuth, RequireRoles } from '../../common/auth.guard';
 import { PlatformAdminGuard } from '../../common/platform-admin.guard';
+import { PlanLimitsGuard, RequirePlanLimit } from '../billing/plan-limits.guard';
 import {
   NotificationService,
   FeatureFlagService,
@@ -166,6 +167,8 @@ export class PlatformController {
   }
 
   @Post('documents')
+  @UseGuards(PlanLimitsGuard)
+  @RequirePlanLimit('documents')
   async createDocument(@Req() req: { auth?: ReturnType<typeof getAuth> }, @Body() body: Record<string, unknown>) {
     const auth = getAuth(req);
     const [doc] = await this.db

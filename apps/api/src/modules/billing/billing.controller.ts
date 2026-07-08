@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Req, Headers, RawBodyRequest } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard, Public, getAuth, RequireRoles } from '../../common/auth.guard';
-import { BillingService } from '../../services/platform.services';
+import { BillingService } from '../../services/billing.service';
 import { CheckoutDto } from '../../dto';
 
 @ApiTags('billing')

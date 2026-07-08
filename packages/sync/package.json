@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@pf/database": "*",
+    "@pf/data-pipeline": "*",
     "@pf/events": "*",
     "@pf/plaid-client": "*",
     "@pf/shared": "*",

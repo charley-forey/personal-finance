@@ -78,6 +78,30 @@ export function usePreferences() {
   return useQuery({ queryKey: ['preferences'], queryFn: () => api.preferences() });
 }
 
+export function useProfile() {
+  return useQuery({ queryKey: ['profile'], queryFn: () => api.profile() });
+}
+
+export function useRecommendations() {
+  return useQuery({ queryKey: ['recommendations'], queryFn: () => api.recommendations() });
+}
+
+export function useKnowledgeSearch(q: string, domain?: string) {
+  return useQuery({
+    queryKey: ['knowledge-search', q, domain],
+    queryFn: () => api.knowledgeSearch(q, domain),
+    enabled: q.trim().length > 0,
+  });
+}
+
+export function useNotifications() {
+  return useQuery({ queryKey: ['notifications'], queryFn: () => api.notifications() });
+}
+
+export function usePortfolioAllocation() {
+  return useQuery({ queryKey: ['portfolio-allocation'], queryFn: () => api.portfolioAllocation() });
+}
+
 export function useBillingPlan() {
   return useQuery({ queryKey: ['billing-plan'], queryFn: () => api.billingPlan() });
 }
@@ -104,6 +128,39 @@ export function useGenerateInsight() {
   return useMutation({
     mutationFn: () => api.generateInsight(),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['insights'] }),
+  });
+}
+
+export function useGenerateRecommendations() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.generateRecommendations(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['recommendations'] }),
+  });
+}
+
+export function useInsightFeedback() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...data
+    }: {
+      id: string;
+      helpful?: boolean;
+      actedOn?: boolean;
+      dismissed?: boolean;
+      reason?: string;
+    }) => api.insightFeedback(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['insights'] }),
+  });
+}
+
+export function useMarkNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.markNotificationRead(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
   });
 }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader, Card } from '@/components/app-shell';
+import { PageLoading } from '@/components/page-states';
 import { Button, Input, Select } from '@/components/ui';
 import { PlaidLinkButton } from '@/components/plaid-link-button';
 import { api } from '@/lib/api';
@@ -82,7 +83,8 @@ export default function OnboardingPage() {
   if (!hydrated) {
     return (
       <div className="max-w-xl mx-auto">
-        <PageHeader title="Setup" description="Loading your progress…" />
+        <PageHeader title="Setup" description="Getting things ready…" />
+        <PageLoading variant="list" count={3} />
       </div>
     );
   }

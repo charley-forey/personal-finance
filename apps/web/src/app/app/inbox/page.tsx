@@ -1,7 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { Inbox } from 'lucide-react';
 import { PageHeader, Card } from '@/components/app-shell';
+import { PageLoading } from '@/components/page-states';
+import { EmptyState, Select } from '@/components/ui';
 import { useInbox, useCategories } from '@/hooks/use-finance';
 import { api, formatCurrency, type Transaction } from '@/lib/api';
 
@@ -21,6 +24,7 @@ export default function InboxPage() {
   };
 
   const total = (data?.uncategorized.length ?? 0) + (data?.anomalies.length ?? 0);
+  const categoryOptions = (categories ?? []).map((c) => ({ value: c.id, label: c.name }));
 
   return (
     <div>
@@ -29,10 +33,14 @@ export default function InboxPage() {
         description={total > 0 ? `${total} items need your attention` : 'All caught up!'}
       />
 
-      {isLoading && <p className="text-muted">Loading inbox...</p>}
+      {isLoading && <PageLoading variant="list" count={4} />}
 
       {total === 0 && !isLoading && (
-        <Card><p className="text-muted text-sm">Inbox zero! All transactions categorized.</p></Card>
+        <EmptyState
+          icon={Inbox}
+          title="Inbox zero!"
+          description="All transactions are categorized. New uncategorized items will appear here."
+        />
       )}
 
       {data?.uncategorized && data.uncategorized.length > 0 && (
@@ -40,7 +48,7 @@ export default function InboxPage() {
           <h2 className="font-semibold mb-3">Uncategorized ({data.uncategorized.length})</h2>
           <div className="space-y-2">
             {data.uncategorized.map((txn) => (
-              <TxnRow key={txn.id} txn={txn} categories={categories ?? []} busy={busy === txn.id} onCategorize={categorize} />
+              <TxnRow key={txn.id} txn={txn} categoryOptions={categoryOptions} busy={busy === txn.id} onCategorize={categorize} />
             ))}
           </div>
         </section>
@@ -51,7 +59,7 @@ export default function InboxPage() {
           <h2 className="font-semibold mb-3">Large Transactions ({data.anomalies.length})</h2>
           <div className="space-y-2">
             {data.anomalies.map((txn) => (
-              <TxnRow key={txn.id} txn={txn} categories={categories ?? []} busy={busy === txn.id} onCategorize={categorize} anomaly />
+              <TxnRow key={txn.id} txn={txn} categoryOptions={categoryOptions} busy={busy === txn.id} onCategorize={categorize} anomaly />
             ))}
           </div>
         </section>
@@ -62,13 +70,13 @@ export default function InboxPage() {
 
 function TxnRow({
   txn,
-  categories,
+  categoryOptions,
   busy,
   onCategorize,
   anomaly,
 }: {
   txn: Transaction;
-  categories: Array<{ id: string; name: string }>;
+  categoryOptions: Array<{ value: string; label: string }>;
   busy: boolean;
   onCategorize: (txn: Transaction, categoryId: string) => void;
   anomaly?: boolean;
@@ -85,17 +93,14 @@ function TxnRow({
           <span className={`font-mono tabular-nums ${amt > 0 ? 'text-red-400' : 'text-green-400'}`}>
             {formatCurrency(Math.abs(amt))}
           </span>
-          <select
+          <Select
+            className="min-w-[160px]"
+            placeholder="Categorize…"
+            options={categoryOptions}
             disabled={busy}
-            className="bg-background border border-card-border rounded px-2 py-1 text-sm"
-            defaultValue=""
+            value=""
             onChange={(e) => e.target.value && onCategorize(txn, e.target.value)}
-          >
-            <option value="">Categorize...</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+          />
         </div>
       </div>
     </Card>
