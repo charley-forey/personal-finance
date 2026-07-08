@@ -6,12 +6,18 @@
     "dev": "next dev --port 3000",
     "build": "next build",
     "start": "next start",
+    "start:prod": "npm run build && next start --port 3000",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@pf/shared": "*",
+    "@tanstack/react-query": "^5.101.2",
+    "@workos-inc/authkit-nextjs": "^4.2.0",
+    "@workos-inc/node": "^10.7.0",
     "clsx": "^2.1.1",
+    "dotenv": "^17.4.2",
     "lucide-react": "^0.469.0",
     "next": "15.5.20",
     "react": "19.1.0",
@@ -21,6 +27,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.49.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

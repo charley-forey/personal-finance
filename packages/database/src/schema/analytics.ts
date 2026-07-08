@@ -11,8 +11,20 @@ import {
   uniqueIndex,
   index,
 } from 'drizzle-orm/pg-core';
-import { organizations, users } from './identity.js';
-import { pnlPeriodStatusEnum, insightTypeEnum, notificationChannelEnum, goalTypeEnum, scenarioTypeEnum, documentTypeEnum, entityTypeEnum, grantTypeEnum, lifePlanTypeEnum, agentTypeEnum } from './identity.js';
+import {
+  organizations,
+  users,
+  pnlPeriodStatusEnum,
+  insightTypeEnum,
+  notificationChannelEnum,
+  goalTypeEnum,
+  scenarioTypeEnum,
+  documentTypeEnum,
+  entityTypeEnum,
+  grantTypeEnum,
+  lifePlanTypeEnum,
+  agentTypeEnum,
+} from './identity';
 
 export const dailyOrgSnapshots = pgTable(
   'daily_org_snapshots',
@@ -248,6 +260,7 @@ export const agentRuns = pgTable('agent_runs', {
   toolCallsJson: jsonb('tool_calls_json'),
   tokensUsed: integer('tokens_used'),
   latencyMs: integer('latency_ms'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const manualAssets = pgTable('manual_assets', {

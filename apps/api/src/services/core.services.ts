@@ -1,13 +1,20 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { createPlaidClient, buildLinkTokenRequest } from '@pf/plaid-client';
-import { organizations, users, organizationMembers, domainEvents } from '@pf/database';
+import { syncPlaidItem, seedDefaultCategories, categorizeTransaction } from '@pf/sync';
+import { organizations, users, organizationMembers, domainEvents, auditLogs, plaidWebhookEvents } from '@pf/database';
 import { DATABASE } from '../database.module';
 import type { Database } from '@pf/database';
-import { encryptToken, decryptToken } from '../common/crypto.util';
-import { plaidItems, accounts, accountBalances, transactions } from '@pf/database';
-import { EVENT_TYPES, createEvent } from '@pf/events';
+import type { AuthContext, MemberRole } from '@pf/shared';
+import { encryptToken, decryptToken, requireEncryptionKey } from '../common/crypto.util';
+import { plaidItems } from '@pf/database';
+import { EVENT_TYPES } from '@pf/events';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { decodeProtectedHeader, jwtVerify, importJWK } from 'jose';
+
+const PLAID_SYNC_QUEUE = 'plaid-sync';
 
 @Injectable()
 export class PlaidService {
@@ -16,6 +23,7 @@ export class PlaidService {
   constructor(
     @Inject(DATABASE) private db: Database,
     private config: ConfigService,
+    @InjectQueue(PLAID_SYNC_QUEUE) private syncQueue: Queue,
   ) {
     this.plaid = createPlaidClient({
       clientId: this.config.get('PLAID_CLIENT_ID', ''),
@@ -25,17 +33,52 @@ export class PlaidService {
     });
   }
 
-  async createLinkToken(userId: string, orgId: string) {
-    const request = buildLinkTokenRequest(
-      userId,
-      'Personal Finance OS',
-      this.config.get('PLAID_WEBHOOK_URL'),
+  private getEncryptionKey(): string {
+    return requireEncryptionKey(
+      this.config.get('TOKEN_ENCRYPTION_KEY'),
+      this.config.get('NODE_ENV', 'development'),
     );
-    const response = await this.plaid.linkTokenCreate(request);
-    return { linkToken: response.data.link_token, expiration: response.data.expiration };
   }
 
-  async exchangePublicToken(publicToken: string, orgId: string) {
+  async createLinkToken(userId: string, orgId: string) {
+    const env = this.config.get('PLAID_ENV', 'sandbox');
+    const productsEnv = this.config.get<string>('PLAID_PRODUCTS');
+    const defaultProducts =
+      env === 'production' ? (['transactions'] as const) : (['transactions', 'investments', 'liabilities'] as const);
+    const products = productsEnv
+      ? (productsEnv.split(',').map((p) => p.trim()) as Array<'transactions' | 'investments' | 'liabilities'>)
+      : [...defaultProducts];
+
+    const redirectUri = this.config.get('PLAID_REDIRECT_URI')?.trim();
+    const safeRedirectUri =
+      redirectUri && (env !== 'production' || redirectUri.startsWith('https://')) ? redirectUri : undefined;
+
+    const request = buildLinkTokenRequest(userId, 'Personal Finance OS', {
+      webhookUrl: this.config.get('PLAID_WEBHOOK_URL'),
+      redirectUri: safeRedirectUri,
+      products,
+    });
+
+    try {
+      const response = await this.plaid.linkTokenCreate(request);
+      return { linkToken: response.data.link_token, expiration: response.data.expiration };
+    } catch (error: unknown) {
+      const plaidError =
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof (error as { response?: { data?: { error_message?: string } } }).response?.data?.error_message ===
+          'string'
+          ? (error as { response: { data: { error_message: string } } }).response.data.error_message
+          : error instanceof Error
+            ? error.message
+            : 'Plaid link token request failed';
+
+      throw new Error(plaidError);
+    }
+  }
+
+  async exchangePublicToken(publicToken: string, orgId: string, userId?: string) {
     const exchange = await this.plaid.itemPublicTokenExchange({ public_token: publicToken });
     const accessToken = exchange.data.access_token;
     const itemId = exchange.data.item_id;
@@ -56,8 +99,7 @@ export class PlaidService {
       }
     }
 
-    const encryptionKey = this.config.get('TOKEN_ENCRYPTION_KEY', 'dev-key-change-in-production');
-    const encrypted = encryptToken(accessToken, encryptionKey);
+    const encrypted = encryptToken(accessToken, this.getEncryptionKey());
 
     const [item] = await this.db
       .insert(plaidItems)
@@ -79,136 +121,102 @@ export class PlaidService {
       payloadJson: { institutionName, itemId },
     });
 
-    await this.syncItem(item!.id, orgId);
+    await this.db.insert(auditLogs).values({
+      orgId,
+      userId: userId ?? null,
+      action: 'plaid.item.linked',
+      entityType: 'plaid_item',
+      entityId: item!.id,
+      metadataJson: { institutionName },
+    });
+
+    await seedDefaultCategories(this.db, orgId);
+    await this.enqueueSync(item!.id, orgId);
     return item;
+  }
+
+  async enqueueSync(itemDbId: string, orgId: string) {
+    await this.syncQueue.add('sync', { itemId: itemDbId, orgId }, { attempts: 3, backoff: { type: 'exponential', delay: 5000 } });
+    return { queued: true, itemId: itemDbId };
   }
 
   async syncItem(itemDbId: string, orgId: string) {
     const [item] = await this.db.select().from(plaidItems).where(eq(plaidItems.id, itemDbId));
     if (!item) return;
 
-    const encryptionKey = this.config.get('TOKEN_ENCRYPTION_KEY', 'dev-key-change-in-production');
-    const accessToken = decryptToken(item.accessTokenEncrypted, encryptionKey);
+    const accessToken = decryptToken(item.accessTokenEncrypted, this.getEncryptionKey());
 
-    await this.db.update(plaidItems).set({ syncStatus: 'syncing' }).where(eq(plaidItems.id, itemDbId));
+    return syncPlaidItem(this.db, this.plaid, itemDbId, orgId, accessToken, {
+      categorize: (oid, txnId) => categorizeTransaction(this.db, oid, txnId),
+    });
+  }
+
+  async removePlaidItem(itemDbId: string, orgId: string): Promise<void> {
+    const [item] = await this.db
+      .select()
+      .from(plaidItems)
+      .where(and(eq(plaidItems.id, itemDbId), eq(plaidItems.orgId, orgId)))
+      .limit(1);
+    if (!item) return;
 
     try {
-      const accountsResponse = await this.plaid.accountsGet({ access_token: accessToken });
+      const accessToken = decryptToken(item.accessTokenEncrypted, this.getEncryptionKey());
+      await this.plaid.itemRemove({ access_token: accessToken });
+    } catch {
+      // Item may already be removed at Plaid; continue with local deletion.
+    }
 
-      for (const acct of accountsResponse.data.accounts) {
-        const [existing] = await this.db
-          .select()
-          .from(accounts)
-          .where(eq(accounts.plaidAccountId, acct.account_id));
+    await this.db
+      .delete(plaidItems)
+      .where(and(eq(plaidItems.id, itemDbId), eq(plaidItems.orgId, orgId)));
+  }
 
-        let accountId: string;
-        if (existing) {
-          accountId = existing.id;
-        } else {
-          const [inserted] = await this.db
-            .insert(accounts)
-            .values({
-              orgId,
-              itemId: itemDbId,
-              plaidAccountId: acct.account_id,
-              name: acct.name,
-              officialName: acct.official_name ?? undefined,
-              type: acct.type,
-              subtype: acct.subtype ?? undefined,
-              mask: acct.mask ?? undefined,
-              currency: acct.balances.iso_currency_code ?? 'USD',
-            })
-            .returning();
-          accountId = inserted!.id;
-        }
+  async removeAllPlaidItemsForOrg(orgId: string): Promise<{ removed: number }> {
+    const items = await this.db.select().from(plaidItems).where(eq(plaidItems.orgId, orgId));
+    for (const item of items) {
+      await this.removePlaidItem(item.id, orgId);
+    }
+    return { removed: items.length };
+  }
 
-        await this.db.insert(accountBalances).values({
-          accountId,
-          available: acct.balances.available?.toString(),
-          current: acct.balances.current?.toString(),
-          limitAmount: acct.balances.limit?.toString(),
-          isoCurrencyCode: acct.balances.iso_currency_code ?? 'USD',
-        });
-      }
+  async verifyWebhookJwt(token: string, body: Record<string, unknown>): Promise<boolean> {
+    try {
+      const header = decodeProtectedHeader(token);
+      const keyId = header.kid;
+      if (!keyId) return false;
 
-      let cursor = item.cursor ?? undefined;
-      let hasMore = true;
+      const keyResponse = await this.plaid.webhookVerificationKeyGet({ key_id: keyId });
+      const jwk = keyResponse.data.key as Parameters<typeof importJWK>[0];
+      const key = await importJWK(jwk);
+      const bodyHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(body)));
+      const bodyHashHex = Buffer.from(bodyHash).toString('hex');
 
-      while (hasMore) {
-        const syncResponse = await this.plaid.transactionsSync({
-          access_token: accessToken,
-          cursor,
-        });
-
-        for (const txn of syncResponse.data.added) {
-          const account = await this.db
-            .select()
-            .from(accounts)
-            .where(eq(accounts.plaidAccountId, txn.account_id))
-            .limit(1);
-
-          if (!account[0]) continue;
-
-          await this.db
-            .insert(transactions)
-            .values({
-              orgId,
-              accountId: account[0].id,
-              plaidTransactionId: txn.transaction_id,
-              amount: txn.amount.toString(),
-              isoCurrencyCode: txn.iso_currency_code ?? 'USD',
-              date: txn.date,
-              authorizedDate: txn.authorized_date ?? undefined,
-              name: txn.name,
-              merchantName: txn.merchant_name ?? undefined,
-              pending: txn.pending,
-              paymentChannel: txn.payment_channel ?? undefined,
-              plaidCategoryPrimary: txn.personal_finance_category?.primary,
-              plaidCategoryDetailed: txn.personal_finance_category?.detailed,
-              locationJson: txn.location ? (txn.location as unknown as Record<string, unknown>) : undefined,
-              rawJson: txn as unknown as Record<string, unknown>,
-            })
-            .onConflictDoNothing();
-        }
-
-        for (const txnId of syncResponse.data.removed) {
-          // Mark removed transactions - in production would soft-delete
-        }
-
-        cursor = syncResponse.data.next_cursor;
-        hasMore = syncResponse.data.has_more;
-      }
-
-      await this.db
-        .update(plaidItems)
-        .set({
-          syncStatus: 'success',
-          cursor,
-          lastSyncedAt: new Date(),
-          errorCode: null,
-        })
-        .where(eq(plaidItems.id, itemDbId));
-
-      await this.db.insert(domainEvents).values({
-        orgId,
-        eventType: EVENT_TYPES.PLAID_SYNC_COMPLETED,
-        aggregateType: 'plaid_item',
-        aggregateId: itemDbId,
-        payloadJson: { cursor },
-      });
-    } catch (error) {
-      await this.db
-        .update(plaidItems)
-        .set({
-          syncStatus: 'error',
-          errorCode: error instanceof Error ? error.message : 'unknown',
-        })
-        .where(eq(plaidItems.id, itemDbId));
-      throw error;
+      await jwtVerify(token, key, { maxTokenAge: '5 min' });
+      const decoded = JSON.parse(Buffer.from(token.split('.')[1]!, 'base64url').toString());
+      return decoded.request_body_sha256 === bodyHashHex;
+    } catch {
+      const env = this.config.get('PLAID_ENV', 'sandbox');
+      const isProd = process.env.NODE_ENV === 'production' || env === 'production';
+      if (isProd) return false;
+      return env === 'sandbox' || env === 'development';
     }
   }
 
-  async handleWebhook(body: Record<string, unknown>) {
+  async handleWebhook(body: Record<string, unknown>, verificationHeader?: string) {
+    const env = this.config.get('PLAID_ENV', 'sandbox');
+    const isProd = process.env.NODE_ENV === 'production' || env === 'production';
+
+    if (isProd && !verificationHeader) {
+      return { received: false, error: 'Missing webhook verification header' };
+    }
+
+    if (verificationHeader) {
+      const valid = await this.verifyWebhookJwt(verificationHeader, body);
+      if (!valid) return { received: false, error: 'Invalid webhook signature' };
+    } else if (isProd) {
+      return { received: false, error: 'Webhook verification required in production' };
+    }
+
     const webhookType = body.webhook_type as string;
     const webhookCode = body.webhook_code as string;
     const itemId = body.item_id as string;
@@ -219,10 +227,56 @@ export class PlaidService {
       .where(eq(plaidItems.plaidItemId, itemId))
       .limit(1);
 
-    if (!item) return { received: true };
+    const [event] = await this.db
+      .insert(plaidWebhookEvents)
+      .values({
+        orgId: item?.orgId,
+        itemId: item?.id,
+        webhookType,
+        webhookCode,
+        payloadJson: body,
+        status: 'pending',
+      })
+      .returning();
 
-    if (webhookCode === 'SYNC_UPDATES_AVAILABLE' || webhookCode === 'DEFAULT_UPDATE') {
-      await this.syncItem(item.id, item.orgId);
+    if (!item) {
+      await this.db
+        .update(plaidWebhookEvents)
+        .set({ status: 'ignored', processedAt: new Date() })
+        .where(eq(plaidWebhookEvents.id, event!.id));
+      return { received: true };
+    }
+
+    try {
+      if (webhookCode === 'SYNC_UPDATES_AVAILABLE' || webhookCode === 'DEFAULT_UPDATE') {
+        await this.enqueueSync(item.id, item.orgId);
+      } else if (webhookCode === 'ITEM_LOGIN_REQUIRED' || webhookCode === 'PENDING_EXPIRATION') {
+        await this.db
+          .update(plaidItems)
+          .set({ loginRequired: true, errorCode: webhookCode })
+          .where(eq(plaidItems.id, item.id));
+        await this.db.insert(auditLogs).values({
+          orgId: item.orgId,
+          action: 'plaid.item.reauth_required',
+          entityType: 'plaid_item',
+          entityId: item.id,
+          metadataJson: { webhookCode },
+        });
+      }
+
+      await this.db
+        .update(plaidWebhookEvents)
+        .set({ status: 'processed', processedAt: new Date() })
+        .where(eq(plaidWebhookEvents.id, event!.id));
+    } catch (err) {
+      await this.db
+        .update(plaidWebhookEvents)
+        .set({
+          status: 'error',
+          error: err instanceof Error ? err.message : 'unknown',
+          processedAt: new Date(),
+        })
+        .where(eq(plaidWebhookEvents.id, event!.id));
     }
 
     return { received: true, webhookType, webhookCode };
@@ -232,6 +286,26 @@ export class PlaidService {
 @Injectable()
 export class AuthService {
   constructor(@Inject(DATABASE) private db: Database) {}
+
+  async resolveContext(
+    workosUserId: string,
+    email: string,
+    name?: string,
+    workosOrgId?: string,
+  ): Promise<AuthContext> {
+    const user = await this.ensureUser(workosUserId, email, name);
+    const membership = await this.ensureMembership(user!, workosOrgId, name ?? email);
+
+    await seedDefaultCategories(this.db, membership.orgId);
+
+    return {
+      userId: user!.id,
+      workosUserId,
+      email,
+      orgId: membership.orgId,
+      role: membership.role,
+    };
+  }
 
   async ensureUser(workosUserId: string, email: string, name?: string) {
     const [existing] = await this.db
@@ -247,17 +321,61 @@ export class AuthService {
       .values({ workosUserId, email, name })
       .returning();
 
-    const [org] = await this.db
-      .insert(organizations)
-      .values({ name: `${name ?? email}'s Organization`, workosOrgId: workosUserId })
-      .returning();
+    return user;
+  }
+
+  private async ensureMembership(
+    user: { id: string },
+    workosOrgId?: string,
+    label?: string,
+  ): Promise<{ orgId: string; role: MemberRole }> {
+    const [existingMembership] = await this.db
+      .select({
+        orgId: organizationMembers.orgId,
+        role: organizationMembers.role,
+      })
+      .from(organizationMembers)
+      .where(eq(organizationMembers.userId, user.id))
+      .limit(1);
+
+    if (existingMembership) {
+      return {
+        orgId: existingMembership.orgId,
+        role: existingMembership.role,
+      };
+    }
+
+    let orgId: string;
+    if (workosOrgId) {
+      const [existingOrg] = await this.db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.workosOrgId, workosOrgId))
+        .limit(1);
+
+      if (existingOrg) {
+        orgId = existingOrg.id;
+      } else {
+        const [org] = await this.db
+          .insert(organizations)
+          .values({ name: `${label ?? 'Personal'} Organization`, workosOrgId })
+          .returning();
+        orgId = org!.id;
+      }
+    } else {
+      const [org] = await this.db
+        .insert(organizations)
+        .values({ name: `${label ?? 'Personal'} Organization` })
+        .returning();
+      orgId = org!.id;
+    }
 
     await this.db.insert(organizationMembers).values({
-      orgId: org!.id,
-      userId: user!.id,
+      orgId,
+      userId: user.id,
       role: 'owner',
     });
 
-    return user;
+    return { orgId, role: 'owner' };
   }
 }

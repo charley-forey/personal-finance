@@ -1,14 +1,20 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
+import { resolve } from 'path';
 import { createDb, type Database } from '@pf/database';
 
 export const DATABASE = 'DATABASE';
 
+const rootEnvPath = resolve(process.cwd(), '../../.env');
+
 @Global()
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [rootEnvPath, resolve(process.cwd(), '.env')],
+    }),
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
@@ -18,6 +24,12 @@ export const DATABASE = 'DATABASE';
       }),
       inject: [ConfigService],
     }),
+    BullModule.registerQueue(
+      { name: 'plaid-sync' },
+      { name: 'daily-rollup' },
+      { name: 'ai-insights' },
+      { name: 'notifications' },
+    ),
   ],
   providers: [
     {
@@ -27,7 +39,7 @@ export const DATABASE = 'DATABASE';
         if (!url) {
           console.warn('DATABASE_URL not set — using in-memory fallback mode');
         }
-        return createDb(url ?? 'postgresql://postgres:postgres@localhost:5432/personal_finance');
+        return createDb(url ?? 'postgresql://postgres:postgres@localhost:5433/personal_finance');
       },
       inject: [ConfigService],
     },

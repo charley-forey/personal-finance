@@ -2,15 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { PageHeader, Card, StatCard } from '@/components/app-shell';
-import { api, setAuthToken } from '@/lib/api';
+import { api } from '@/lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export default function RetirementPage() {
   const [result, setResult] = useState<{ result?: { successRate: number; medianEndingBalance: number; percentiles: { p50: number[]; p10: number[]; p90: number[] } } } | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('pf_token');
-    if (token) setAuthToken(token);
     api.monteCarlo({ name: 'Retirement', years: 30, monthlyContribution: 2000, monthlyWithdrawal: 5000 })
       .then((r) => setResult(r as typeof result))
       .catch(console.error);

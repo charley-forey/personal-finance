@@ -1,0 +1,98 @@
+'use client';
+
+import { useQuery } from '@tanstack/react-query';
+import { PageHeader, Card, StatCard } from '@/components/app-shell';
+import { Badge, DataTable, Skeleton } from '@/components/ui';
+import { api, formatCurrency, type BillEvent } from '@/lib/api';
+import { formatDate } from '@/lib/format';
+
+export default function CalendarPage() {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['bill-calendar'],
+    queryFn: () => api.billCalendar(),
+  });
+
+  const eventsByDate = (data?.events ?? []).reduce<Record<string, BillEvent[]>>((acc, e) => {
+    (acc[e.date] ??= []).push(e);
+    return acc;
+  }, {});
+
+  const sortedDates = Object.keys(eventsByDate).sort();
+
+  return (
+    <div>
+      <PageHeader
+        title="Bill Calendar"
+        description="Recurring bills and debt payments over the next 30 days"
+      />
+
+      {error && (
+        <Card className="mb-6 border-danger/50">
+          <p className="text-danger text-sm">{error.message}</p>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        {isLoading ? (
+          <>
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+          </>
+        ) : (
+          <>
+            <StatCard label="Total Due (30 days)" value={formatCurrency(data?.totalDue ?? 0)} />
+            <StatCard label="Upcoming Bills" value={String(data?.events.length ?? 0)} />
+          </>
+        )}
+      </div>
+
+      {isLoading && <p className="text-muted text-sm">Loading calendar...</p>}
+
+      {!isLoading && sortedDates.length > 0 && (
+        <div className="space-y-4 mb-8">
+          {sortedDates.map((date) => (
+            <Card key={date} title={formatDate(date)}>
+              <div className="space-y-2">
+                {eventsByDate[date]!.map((event) => (
+                  <div key={`${event.sourceId}-${event.type}`} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <span>{event.label}</span>
+                      <Badge variant={event.type === 'recurring' ? 'default' : 'warning'}>
+                        {event.type}
+                      </Badge>
+                    </div>
+                    <span className="tabular-nums font-medium">{formatCurrency(event.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {!isLoading && data && (
+        <DataTable
+          data={data.events}
+          keyExtractor={(e) => `${e.sourceId}-${e.date}-${e.type}`}
+          emptyMessage="No bills due in the next 30 days."
+          columns={[
+            { key: 'date', header: 'Date', render: (e) => formatDate(e.date) },
+            { key: 'label', header: 'Description' },
+            {
+              key: 'type',
+              header: 'Type',
+              render: (e) => (
+                <Badge variant={e.type === 'recurring' ? 'default' : 'warning'}>{e.type}</Badge>
+              ),
+            },
+            {
+              key: 'amount',
+              header: 'Amount',
+              render: (e) => formatCurrency(e.amount),
+            },
+          ]}
+        />
+      )}
+    </div>
+  );
+}

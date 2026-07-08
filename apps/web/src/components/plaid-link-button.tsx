@@ -1,66 +1,52 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { usePlaidLink } from 'react-plaid-link';
-import { api, setAuthToken } from '@/lib/api';
+import dynamic from 'next/dynamic';
+import { useCallback, useState } from 'react';
+import { api } from '@/lib/api';
+
+const PlaidLinkOpener = dynamic(
+  () => import('./plaid-link-opener').then((m) => m.PlaidLinkOpener),
+  {
+    ssr: false,
+    loading: () => (
+      <button type="button" disabled className="px-4 py-2 bg-primary/50 text-black font-medium rounded-lg">
+        Loading Plaid...
+      </button>
+    ),
+  },
+);
 
 export function PlaidLinkButton() {
   const [linkToken, setLinkToken] = useState<string | null>(null);
-  const [status, setStatus] = useState<string>('');
-
-  useEffect(() => {
-    const token = localStorage.getItem('pf_token');
-    if (!token) {
-      api
-        .createSession({ workosUserId: 'demo-user', email: 'demo@example.com', name: 'Demo User' })
-        .then((res) => setAuthToken(res.token))
-        .catch(console.error);
-    } else {
-      setAuthToken(token);
-    }
-  }, []);
+  const [status, setStatus] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const fetchLinkToken = useCallback(async () => {
+    setLoading(true);
+    setStatus('');
     try {
       const res = await api.linkToken();
       setLinkToken(res.linkToken);
-    } catch (e) {
-      setStatus('Failed to get link token. Is the API running?');
-    }
-  }, []);
-
-  const onSuccess = useCallback(async (publicToken: string) => {
-    setStatus('Connecting account...');
-    try {
-      await api.exchangeToken(publicToken);
-      setStatus('Account linked successfully!');
     } catch {
-      setStatus('Failed to exchange token');
+      setStatus('Failed to get link token. Sign in and ensure the API is running.');
+    } finally {
+      setLoading(false);
     }
   }, []);
-
-  const { open, ready } = usePlaidLink({
-    token: linkToken,
-    onSuccess,
-  });
 
   return (
     <div className="flex flex-col gap-2">
       {!linkToken ? (
         <button
+          type="button"
           onClick={fetchLinkToken}
-          className="px-4 py-2 bg-primary text-black font-medium rounded-lg hover:bg-primary/90"
-        >
-          Prepare Bank Link
-        </button>
-      ) : (
-        <button
-          onClick={() => open()}
-          disabled={!ready}
+          disabled={loading}
           className="px-4 py-2 bg-primary text-black font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50"
         >
-          Connect Bank Account
+          {loading ? 'Preparing...' : 'Prepare Bank Link'}
         </button>
+      ) : (
+        <PlaidLinkOpener linkToken={linkToken} onStatus={setStatus} />
       )}
       {status && <p className="text-sm text-muted">{status}</p>}
     </div>

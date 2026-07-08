@@ -1,40 +1,62 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+
+import { APP_GUARD, APP_FILTER } from '@nestjs/core';
+
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+
+import { LoggerModule } from 'nestjs-pino';
+
 import { DatabaseModule } from './database.module';
-import { AppController } from './app.controller';
-import { PlaidService, AuthService } from './services/core.services';
-import { AnalyticsService, PnlService, TaxService } from './services/analytics.services';
-import {
-  BillingService,
-  NotificationService,
-  FeatureFlagService,
-  AdminService,
-  IntegrationService,
-  ReportService,
-  VerificationService,
-  KnowledgeService,
-} from './services/platform.services';
+
 import { AuthGuard, RolesGuard } from './common/auth.guard';
 
+import { GlobalExceptionFilter } from './common/global-exception.filter';
+
+import { HealthModule } from './modules/health/health.module';
+import { PlaidModule } from './modules/plaid/plaid.module';
+import { AccountsModule } from './modules/accounts/accounts.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { AiModule } from './modules/ai/ai.module';
+import { BillingModule } from './modules/billing/billing.module';
+import { PlatformModule } from './modules/platform/platform.module';
+import { EventsModule } from './modules/events/events.module';
+import { AuthModule } from './modules/auth/auth.module';
+
 @Module({
-  imports: [DatabaseModule],
-  controllers: [AppController],
+  imports: [
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60000,
+        limit: 120,
+      },
+    ]),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        transport:
+          process.env.NODE_ENV !== 'production'
+            ? { target: 'pino-pretty', options: { singleLine: true } }
+            : undefined,
+        autoLogging: true,
+        redact: ['req.headers.authorization'],
+      },
+    }),
+    DatabaseModule,
+    AuthModule,
+    HealthModule,
+    PlaidModule,
+    AccountsModule,
+    AnalyticsModule,
+    AiModule,
+    BillingModule,
+    PlatformModule,
+    EventsModule,
+  ],
   providers: [
-    PlaidService,
-    AuthService,
-    AnalyticsService,
-    PnlService,
-    TaxService,
-    BillingService,
-    NotificationService,
-    FeatureFlagService,
-    AdminService,
-    IntegrationService,
-    ReportService,
-    VerificationService,
-    KnowledgeService,
-    { provide: APP_GUARD, useClass: AuthGuard },
-    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useExisting: AuthGuard },
+    { provide: APP_GUARD, useExisting: RolesGuard },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_FILTER, useClass: GlobalExceptionFilter },
   ],
 })
 export class AppModule {}

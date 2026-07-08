@@ -2,7 +2,6 @@
 
 import { useEffect, useState, ReactNode } from 'react';
 import { PageHeader, Card } from '@/components/app-shell';
-import { setAuthToken } from '@/lib/api';
 
 interface DataPageProps {
   title: string;
@@ -18,8 +17,6 @@ export function DataPage({ title, description, load, render, actions }: DataPage
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('pf_token');
-    if (token) setAuthToken(token);
     load()
       .then(setData)
       .catch((e) => setError(e.message))

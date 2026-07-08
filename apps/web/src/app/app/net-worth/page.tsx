@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { PageHeader, Card, StatCard } from '@/components/app-shell';
-import { api, formatCurrency, setAuthToken } from '@/lib/api';
+import { useFormatCurrency } from '@/hooks/use-currency';
+import { api } from '@/lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function NetWorthPage() {
+  const formatCurrency = useFormatCurrency();
   const [data, setData] = useState<{ current: { netWorth: number }; history: Array<{ snapshotDate: string; netWorth: string }> } | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('pf_token');
-    if (token) setAuthToken(token);
     api.netWorth().then(setData).catch(console.error);
   }, []);
 

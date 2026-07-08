@@ -30,16 +30,36 @@ export function createPlaidClient(config: PlaidConfig): PlaidApi {
 export function buildLinkTokenRequest(
   userId: string,
   clientName: string,
-  webhookUrl?: string,
+  options?: {
+    webhookUrl?: string;
+    redirectUri?: string;
+    products?: Array<'transactions' | 'investments' | 'liabilities'>;
+  },
 ): LinkTokenCreateRequest {
-  return {
+  const productMap = {
+    transactions: Products.Transactions,
+    investments: Products.Investments,
+    liabilities: Products.Liabilities,
+  } as const;
+
+  const selected = options?.products?.length
+    ? options.products
+    : (['transactions', 'investments', 'liabilities'] as const);
+
+  const request: LinkTokenCreateRequest = {
     user: { client_user_id: userId },
     client_name: clientName,
-    products: [Products.Transactions, Products.Investments, Products.Liabilities],
+    products: selected.map((p) => productMap[p]),
     country_codes: [CountryCode.Us],
     language: 'en',
-    webhook: webhookUrl,
   };
+
+  const webhook = options?.webhookUrl?.trim();
+  const redirectUri = options?.redirectUri?.trim();
+  if (webhook) request.webhook = webhook;
+  if (redirectUri) request.redirect_uri = redirectUri;
+
+  return request;
 }
 
 export { PlaidApi, Products, CountryCode };

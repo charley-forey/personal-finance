@@ -10,8 +10,7 @@ import {
   index,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import { organizations } from './identity.js';
-import { syncStatusEnum } from './identity.js';
+import { organizations, syncStatusEnum } from './identity';
 
 export const plaidItems = pgTable(
   'plaid_items',
@@ -27,6 +26,7 @@ export const plaidItems = pgTable(
     lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
     consentExpiresAt: timestamp('consent_expires_at', { withTimezone: true }),
     errorCode: text('error_code'),
+    loginRequired: boolean('login_required').default(false).notNull(),
     webhookUrl: text('webhook_url'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -105,6 +105,7 @@ export const transactions = pgTable(
     plaidCategoryDetailed: text('plaid_category_detailed'),
     locationJson: jsonb('location_json').$type<Record<string, unknown>>(),
     notes: text('notes'),
+    isDeleted: boolean('is_deleted').default(false).notNull(),
     rawJson: jsonb('raw_json').$type<Record<string, unknown>>(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

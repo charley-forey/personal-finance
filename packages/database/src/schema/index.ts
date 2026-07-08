@@ -1,3 +1,3 @@
-export * from './identity.js';
-export * from './financial.js';
-export * from './analytics.js';
+export * from './identity';
+export * from './financial';
+export * from './analytics';

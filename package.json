@@ -11,13 +11,16 @@
     "dev": "turbo run dev",
     "dev:web": "turbo run dev --filter=@pf/web",
     "dev:api": "turbo run dev --filter=@pf/api",
+    "dev:stack": "turbo run dev --filter=@pf/web --filter=@pf/api --parallel",
     "dev:worker": "turbo run dev --filter=@pf/worker",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "db:generate": "turbo run db:generate --filter=@pf/database",
     "db:migrate": "turbo run db:migrate --filter=@pf/database",
     "db:push": "turbo run db:push --filter=@pf/database",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "prod": "node scripts/run-prod.mjs",
+    "prod:quick": "node scripts/run-prod.mjs --skip-docker --skip-build --skip-db"
   },
   "devDependencies": {
     "turbo": "^2.3.3",

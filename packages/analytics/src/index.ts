@@ -326,3 +326,335 @@ export function forecastCashFlow(
   }
   return series;
 }
+
+export interface BillEvent {
+  date: string;
+  label: string;
+  amount: number;
+  type: 'recurring' | 'liability';
+  sourceId: string;
+}
+
+export interface RecurringInput {
+  id: string;
+  description?: string;
+  averageAmount?: number;
+  frequency?: string;
+  lastDate?: string;
+  isActive?: boolean;
+}
+
+export interface LiabilityInput {
+  id: string;
+  liabilityType?: string;
+  minimumPayment?: number;
+  nextPaymentDue?: string;
+}
+
+function addDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function toIsoDate(date: Date): string {
+  return date.toISOString().split('T')[0]!;
+}
+
+function frequencyToDays(frequency?: string): number {
+  switch (frequency?.toLowerCase()) {
+    case 'weekly':
+      return 7;
+    case 'biweekly':
+      return 14;
+    case 'monthly':
+      return 30;
+    case 'annually':
+    case 'yearly':
+      return 365;
+    default:
+      return 30;
+  }
+}
+
+export function buildBillCalendar(
+  recurring: RecurringInput[],
+  liabilities: LiabilityInput[],
+  days = 30,
+  startDate: Date = new Date(),
+): BillEvent[] {
+  const endDate = addDays(startDate, days);
+  const events: BillEvent[] = [];
+
+  for (const stream of recurring) {
+    if (stream.isActive === false) continue;
+    const amount = Math.abs(stream.averageAmount ?? 0);
+    if (amount <= 0) continue;
+
+    const interval = frequencyToDays(stream.frequency);
+    let cursor = stream.lastDate ? new Date(stream.lastDate) : new Date(startDate);
+    while (cursor <= endDate) {
+      if (cursor >= startDate) {
+        events.push({
+          date: toIsoDate(cursor),
+          label: stream.description ?? 'Recurring payment',
+          amount,
+          type: 'recurring',
+          sourceId: stream.id,
+        });
+      }
+      cursor = addDays(cursor, interval);
+    }
+  }
+
+  for (const liability of liabilities) {
+    const amount = Math.abs(liability.minimumPayment ?? 0);
+    if (amount <= 0 || !liability.nextPaymentDue) continue;
+    const due = new Date(liability.nextPaymentDue);
+    if (due >= startDate && due <= endDate) {
+      events.push({
+        date: toIsoDate(due),
+        label: liability.liabilityType ?? 'Debt payment',
+        amount,
+        type: 'liability',
+        sourceId: liability.id,
+      });
+    }
+  }
+
+  return events.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** @deprecated Use buildBillCalendar for 30-day bill timelines */
+export const eventDrivenCashFlowTimeline = buildBillCalendar;
+
+export interface HoldingInput {
+  id: string;
+  securityName?: string;
+  securityType?: string;
+  ticker?: string;
+  institutionValue?: number;
+}
+
+export interface AllocationTarget {
+  equity: number;
+  fixedIncome: number;
+  cash: number;
+}
+
+export const DEFAULT_ALLOCATION_TARGET: AllocationTarget = {
+  equity: 0.6,
+  fixedIncome: 0.25,
+  cash: 0.15,
+};
+
+export interface AllocationSlice {
+  name: string;
+  value: number;
+  percent: number;
+  targetPercent: number;
+  drift: number;
+}
+
+export function portfolioAllocation(
+  holdings: HoldingInput[],
+  cashBalance = 0,
+  target: AllocationTarget = DEFAULT_ALLOCATION_TARGET,
+) {
+  let equity = 0;
+  let fixedIncome = 0;
+
+  for (const h of holdings) {
+    const val = h.institutionValue ?? 0;
+    const type = (h.securityType ?? '').toLowerCase();
+    if (type.includes('bond') || type.includes('fixed')) {
+      fixedIncome += val;
+    } else {
+      equity += val;
+    }
+  }
+
+  if (equity === 0 && fixedIncome === 0) {
+    equity = holdings.reduce((s, h) => s + (h.institutionValue ?? 0), 0);
+  }
+
+  const cash = cashBalance;
+  const total = equity + fixedIncome + cash;
+  if (total <= 0) {
+    return {
+      total: 0,
+      slices: [] as AllocationSlice[],
+      driftScore: 0,
+      target,
+    };
+  }
+
+  const actual = {
+    equity: equity / total,
+    fixedIncome: fixedIncome / total,
+    cash: cash / total,
+  };
+
+  const slices: AllocationSlice[] = [
+    {
+      name: 'Equity',
+      value: equity,
+      percent: actual.equity * 100,
+      targetPercent: target.equity * 100,
+      drift: (actual.equity - target.equity) * 100,
+    },
+    {
+      name: 'Fixed Income',
+      value: fixedIncome,
+      percent: actual.fixedIncome * 100,
+      targetPercent: target.fixedIncome * 100,
+      drift: (actual.fixedIncome - target.fixedIncome) * 100,
+    },
+    {
+      name: 'Cash',
+      value: cash,
+      percent: actual.cash * 100,
+      targetPercent: target.cash * 100,
+      drift: (actual.cash - target.cash) * 100,
+    },
+  ];
+
+  const driftScore =
+    Math.abs(actual.equity - target.equity) +
+    Math.abs(actual.fixedIncome - target.fixedIncome) +
+    Math.abs(actual.cash - target.cash);
+
+  return { total, slices, driftScore: driftScore * 100, target };
+}
+
+export interface ScenarioInput {
+  name: string;
+  startingBalance: number;
+  monthlyIncome: number;
+  monthlyExpenses: number;
+  months: number;
+  incomeChangePct?: number;
+  expenseChangePct?: number;
+  oneTimeExpense?: number;
+  oneTimeExpenseMonth?: number;
+}
+
+export interface ScenarioMonthResult {
+  month: number;
+  balance: number;
+  income: number;
+  expenses: number;
+  net: number;
+}
+
+export function runScenario(input: ScenarioInput) {
+  const series: ScenarioMonthResult[] = [];
+  let balance = input.startingBalance;
+  let income = input.monthlyIncome;
+  let expenses = input.monthlyExpenses;
+
+  for (let m = 1; m <= input.months; m++) {
+    if (input.incomeChangePct && m > 1) {
+      income *= 1 + input.incomeChangePct / 100 / 12;
+    }
+    if (input.expenseChangePct && m > 1) {
+      expenses *= 1 + input.expenseChangePct / 100 / 12;
+    }
+    let monthExpenses = expenses;
+    if (input.oneTimeExpense && input.oneTimeExpenseMonth === m) {
+      monthExpenses += input.oneTimeExpense;
+    }
+    const net = income - monthExpenses;
+    balance += net;
+    series.push({ month: m, balance, income, expenses: monthExpenses, net });
+  }
+
+  const endingBalance = series[series.length - 1]?.balance ?? input.startingBalance;
+  const minBalance = series.reduce((min, s) => Math.min(min, s.balance), balance);
+  const totalNet = series.reduce((s, r) => s + r.net, 0);
+
+  return {
+    name: input.name,
+    endingBalance,
+    minBalance,
+    totalNet,
+    series,
+    success: minBalance >= 0,
+  };
+}
+
+export interface CashFlowScheduleItem {
+  amount: number;
+  frequency: 'weekly' | 'biweekly' | 'monthly' | 'annually' | 'one_time';
+  type: 'income' | 'expense';
+  startMonth?: number;
+  month?: number;
+  label?: string;
+}
+
+function monthlyEquivalent(amount: number, frequency: CashFlowScheduleItem['frequency']): number {
+  switch (frequency) {
+    case 'weekly':
+      return amount * (52 / 12);
+    case 'biweekly':
+      return amount * (26 / 12);
+    case 'annually':
+      return amount / 12;
+    case 'one_time':
+      return 0;
+    default:
+      return amount;
+  }
+}
+
+export function eventDrivenCashFlow(
+  months: number,
+  startingBalance: number,
+  schedule: CashFlowScheduleItem[],
+) {
+  const series: Array<{
+    month: number;
+    balance: number;
+    income: number;
+    expenses: number;
+    events: Array<{ label?: string; amount: number; type: 'income' | 'expense' }>;
+  }> = [];
+  let balance = startingBalance;
+
+  for (let m = 1; m <= months; m++) {
+    let income = 0;
+    let expenses = 0;
+    const events: Array<{ label?: string; amount: number; type: 'income' | 'expense' }> = [];
+
+    for (const item of schedule) {
+      if (item.startMonth !== undefined && m < item.startMonth) continue;
+
+      if (item.frequency === 'one_time') {
+        if (item.month !== m) continue;
+        const amt = Math.abs(item.amount);
+        if (item.type === 'income') {
+          income += amt;
+          events.push({ label: item.label, amount: amt, type: 'income' });
+        } else {
+          expenses += amt;
+          events.push({ label: item.label, amount: amt, type: 'expense' });
+        }
+        continue;
+      }
+
+      const monthly = monthlyEquivalent(Math.abs(item.amount), item.frequency);
+      if (item.type === 'income') {
+        income += monthly;
+        events.push({ label: item.label, amount: monthly, type: 'income' });
+      } else {
+        expenses += monthly;
+        events.push({ label: item.label, amount: monthly, type: 'expense' });
+      }
+    }
+
+    balance += income - expenses;
+    series.push({ month: m, balance, income, expenses, events });
+  }
+
+  return { model: 'event_driven' as const, series };
+}

@@ -7,7 +7,7 @@ export default function LandingPage() {
         <span className="font-bold text-xl">Personal Finance OS</span>
         <div className="flex gap-4">
           <Link href="/login" className="text-muted hover:text-foreground">Login</Link>
-          <Link href="/app" className="px-4 py-2 bg-primary text-black rounded-lg font-medium">Get Started</Link>
+          <Link href="/login" className="px-4 py-2 bg-primary text-black rounded-lg font-medium">Get Started</Link>
         </div>
       </header>
       <main className="max-w-5xl mx-auto px-8 py-24 text-center">
@@ -20,7 +20,7 @@ export default function LandingPage() {
           forecasts, Monte Carlo retirement planning, and domain-expert agents.
         </p>
         <div className="flex gap-4 justify-center mt-10">
-          <Link href="/app" className="px-8 py-3 bg-primary text-black rounded-lg font-semibold text-lg">
+          <Link href="/login" className="px-8 py-3 bg-primary text-black rounded-lg font-semibold text-lg">
             Open Dashboard
           </Link>
           <Link href="/pricing" className="px-8 py-3 border border-card-border rounded-lg font-semibold text-lg">
