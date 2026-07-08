@@ -17,6 +17,7 @@
     "typecheck": "turbo run typecheck",
     "db:generate": "turbo run db:generate --filter=@pf/database",
     "db:migrate": "turbo run db:migrate --filter=@pf/database",
+    "db:baseline": "turbo run db:baseline --filter=@pf/database",
     "db:push": "turbo run db:push --filter=@pf/database",
     "test": "turbo run test",
     "prod": "node scripts/run-prod.mjs",

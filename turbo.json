@@ -24,6 +24,9 @@
     "db:migrate": {
       "cache": false
     },
+    "db:baseline": {
+      "cache": false
+    },
     "db:push": {
       "cache": false
     }
