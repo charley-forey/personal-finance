@@ -1,0 +1,407 @@
+# Plaid API Documentation (Agent Context)
+
+Scraped Plaid API reference documentation for building a personal finance operating system.
+
+## How to use this corpus
+
+- Each `.md` file is a self-contained page from [Plaid API docs](https://plaid.com/docs/api/).
+- YAML frontmatter includes section, source URL, and extracted endpoints/webhooks.
+- Start with `00-overview/overview.md` for API fundamentals, auth, and environments.
+- Product endpoints live under section folders (`01-payments-and-funding`, `02-financial-insights`, etc.).
+
+## Sections
+
+### Overview (`00-overview/`)
+
+- [Client Libraries](00-overview/libraries.md)
+- [API Reference Overview](00-overview/overview.md)
+- [Postman Collection](00-overview/postman.md)
+- [API Versioning](00-overview/versioning.md)
+- [Webhooks](00-overview/webhooks.md)
+- [Webhooks / Webhook Verification](00-overview/webhooks/webhook-verification.md)
+
+### Payments and Funding (`01-payments-and-funding/`)
+
+- [Auth](01-payments-and-funding/auth.md)
+- [Identity](01-payments-and-funding/identity.md)
+- [Investments Move](01-payments-and-funding/investments-move.md)
+- [Payment Initiation (Europe)](01-payments-and-funding/payment-initiation.md)
+- [Signal and Balance](01-payments-and-funding/signal-and-balance.md)
+- [Transfer](01-payments-and-funding/transfer.md)
+- [Transfer / Account Linking](01-payments-and-funding/transfer/account-linking.md)
+- [Transfer / Initiating Transfers](01-payments-and-funding/transfer/initiating-transfers.md)
+- [Transfer / Ledger](01-payments-and-funding/transfer/ledger.md)
+- [Transfer / Metrics](01-payments-and-funding/transfer/metrics.md)
+- [Transfer / Platform Payments](01-payments-and-funding/transfer/platform-payments.md)
+- [Transfer / Reading Transfers](01-payments-and-funding/transfer/reading-transfers.md)
+- [Transfer / Recurring Transfers](01-payments-and-funding/transfer/recurring-transfers.md)
+- [Transfer / Refunds](01-payments-and-funding/transfer/refunds.md)
+- [Virtual Accounts](01-payments-and-funding/virtual-accounts.md)
+
+### Financial Insights (`02-financial-insights/`)
+
+- [Enrich](02-financial-insights/enrich.md)
+- [Investments](02-financial-insights/investments.md)
+- [Liabilities](02-financial-insights/liabilities.md)
+- [Transactions](02-financial-insights/transactions.md)
+
+### KYC/AML and Anti-Fraud (`03-kyc-aml-anti-fraud/`)
+
+- [Identity Verification](03-kyc-aml-anti-fraud/identity-verification.md)
+- [Look up Dashboard Users](03-kyc-aml-anti-fraud/kyc-aml-users.md)
+- [Monitor](03-kyc-aml-anti-fraud/monitor.md)
+
+### Credit and Underwriting (`04-credit-and-underwriting/`)
+
+- [Assets](04-credit-and-underwriting/assets.md)
+- [Consumer Report (Plaid Check)](04-credit-and-underwriting/check.md)
+- [Income](04-credit-and-underwriting/income.md)
+- [Statements](04-credit-and-underwriting/statements.md)
+
+### Instant Onboarding (`05-instant-onboarding/`)
+
+- [Plaid Layer](05-instant-onboarding/layer.md)
+
+### Fundamentals (`06-fundamentals/`)
+
+- [Accounts](06-fundamentals/accounts.md)
+- [Consent](06-fundamentals/consent.md)
+- [Institutions](06-fundamentals/institutions.md)
+- [Items](06-fundamentals/items.md)
+- [Link](06-fundamentals/link.md)
+- [Network](06-fundamentals/network.md)
+- [OAuth](06-fundamentals/oauth.md)
+- [Sandbox](06-fundamentals/sandbox.md)
+- [Users](06-fundamentals/users.md)
+- [Users / Migrate To New User Apis](06-fundamentals/users/migrate-to-new-user-apis.md)
+- [Users / User Apis](06-fundamentals/users/user-apis.md)
+
+### Partnerships (`07-partnerships/`)
+
+- [Reseller Partners](07-partnerships/partner.md)
+- [Processor Partners](07-partnerships/processor-partners.md)
+- [Processor Tokens](07-partnerships/processors.md)
+
+## Endpoint Index
+
+- `/accounts/balance/get` → `06-fundamentals/accounts.md`, `01-payments-and-funding/identity.md`, `01-payments-and-funding/signal-and-balance.md`, `01-payments-and-funding/transfer/account-linking.md`
+- `/accounts/get` → `06-fundamentals/accounts.md`, `04-credit-and-underwriting/assets.md`, `01-payments-and-funding/identity.md`, `01-payments-and-funding/signal-and-balance.md`
+- `/asset_report/audit_copy/create` → `04-credit-and-underwriting/assets.md`
+- `/asset_report/audit_copy/remove` → `04-credit-and-underwriting/assets.md`
+- `/asset_report/create` → `04-credit-and-underwriting/assets.md`
+- `/asset_report/filter` → `04-credit-and-underwriting/assets.md`
+- `/asset_report/get` → `04-credit-and-underwriting/assets.md`
+- `/asset_report/pdf/get` → `00-overview/overview.md`, `04-credit-and-underwriting/assets.md`
+- `/asset_report/refresh` → `04-credit-and-underwriting/assets.md`
+- `/asset_report/remove` → `06-fundamentals/items.md`, `04-credit-and-underwriting/assets.md`
+- `/auth/get` → `01-payments-and-funding/auth.md`, `00-overview/versioning.md`
+- `/auth/verify` → `01-payments-and-funding/auth.md`
+- `/bank_transfer/event/list` → `01-payments-and-funding/auth.md`
+- `/bank_transfer/event/sync` → `01-payments-and-funding/auth.md`
+- `/categories/get` → `04-credit-and-underwriting/assets.md`, `02-financial-insights/enrich.md`, `02-financial-insights/transactions.md`
+- `/consent/events/get` → `06-fundamentals/consent.md`
+- `/cra/check_report/base_report/get` → `04-credit-and-underwriting/check.md`, `06-fundamentals/users/migrate-to-new-user-apis.md`
+- `/cra/check_report/cashflow_insights/get` → `04-credit-and-underwriting/check.md`
+- `/cra/check_report/create` → `04-credit-and-underwriting/check.md`, `06-fundamentals/users/migrate-to-new-user-apis.md`
+- `/cra/check_report/income_insights/get` → `04-credit-and-underwriting/check.md`
+- `/cra/check_report/lend_score/get` → `04-credit-and-underwriting/check.md`
+- `/cra/check_report/network_insights/get` → `04-credit-and-underwriting/check.md`
+- `/cra/check_report/partner_insights/get` → `04-credit-and-underwriting/check.md`
+- `/cra/check_report/pdf/get` → `04-credit-and-underwriting/check.md`
+- `/cra/check_report/verification/get` → `04-credit-and-underwriting/check.md`
+- `/cra/check_report/verification/pdf/get` → `04-credit-and-underwriting/check.md`
+- `/cra/monitoring_insights/get` → `04-credit-and-underwriting/check.md`
+- `/cra/monitoring_insights/subscribe` → `04-credit-and-underwriting/check.md`
+- `/cra/monitoring_insights/unsubscribe` → `04-credit-and-underwriting/check.md`
+- `/credit/bank_income/get` → `04-credit-and-underwriting/income.md`
+- `/credit/bank_income/pdf/get` → `04-credit-and-underwriting/income.md`
+- `/credit/bank_statements/uploads/get` → `04-credit-and-underwriting/income.md`
+- `/credit/employment/get` → `04-credit-and-underwriting/income.md`
+- `/credit/payroll_income/get` → `04-credit-and-underwriting/income.md`
+- `/credit/payroll_income/parsing_config/update` → `04-credit-and-underwriting/income.md`
+- `/credit/payroll_income/refresh` → `04-credit-and-underwriting/income.md`
+- `/credit/payroll_income/risk_signals/get` → `04-credit-and-underwriting/income.md`
+- `/credit/relay/create` → `04-credit-and-underwriting/assets.md`
+- `/credit/relay/get` → `04-credit-and-underwriting/assets.md`
+- `/credit/relay/refresh` → `04-credit-and-underwriting/assets.md`
+- `/credit/relay/remove` → `04-credit-and-underwriting/assets.md`
+- `/credit/sessions/get` → `04-credit-and-underwriting/income.md`
+- `/dashboard_user/get` → `03-kyc-aml-anti-fraud/kyc-aml-users.md`, `03-kyc-aml-anti-fraud/identity-verification.md`, `03-kyc-aml-anti-fraud/monitor.md`
+- `/dashboard_user/list` → `03-kyc-aml-anti-fraud/kyc-aml-users.md`, `03-kyc-aml-anti-fraud/identity-verification.md`, `03-kyc-aml-anti-fraud/monitor.md`
+- `/identity/documents/uploads/get` → `01-payments-and-funding/identity.md`
+- `/identity/get` → `01-payments-and-funding/identity.md`
+- `/identity/match` → `01-payments-and-funding/identity.md`
+- `/identity_verification/create` → `03-kyc-aml-anti-fraud/identity-verification.md`
+- `/identity_verification/get` → `03-kyc-aml-anti-fraud/identity-verification.md`
+- `/identity_verification/list` → `03-kyc-aml-anti-fraud/identity-verification.md`
+- `/identity_verification/retry` → `03-kyc-aml-anti-fraud/identity-verification.md`
+- `/institutions/get` → `06-fundamentals/institutions.md`, `00-overview/versioning.md`
+- `/institutions/get_by_id` → `06-fundamentals/accounts.md`, `06-fundamentals/institutions.md`, `00-overview/versioning.md`
+- `/institutions/search` → `06-fundamentals/institutions.md`, `00-overview/versioning.md`
+- `/investments/auth/get` → `01-payments-and-funding/investments-move.md`
+- `/investments/holdings/get` → `02-financial-insights/investments.md`
+- `/investments/refresh` → `02-financial-insights/investments.md`
+- `/investments/transactions/get` → `07-partnerships/processor-partners.md`, `02-financial-insights/investments.md`, `02-financial-insights/transactions.md`
+- `/item/access_token/invalidate` → `06-fundamentals/items.md`
+- `/item/get` → `06-fundamentals/consent.md`, `06-fundamentals/items.md`, `07-partnerships/processor-partners.md`, `02-financial-insights/transactions.md`
+- `/item/public_token/exchange` → `06-fundamentals/items.md`, `06-fundamentals/link.md`, `06-fundamentals/sandbox.md`
+- `/item/remove` → `06-fundamentals/items.md`, `07-partnerships/processors.md`, `04-credit-and-underwriting/assets.md`, `01-payments-and-funding/transfer/refunds.md`, `06-fundamentals/users.md`, `00-overview/versioning.md`
+- `/item/webhook/update` → `06-fundamentals/items.md`
+- `/liabilities/get` → `02-financial-insights/liabilities.md`
+- `/link/token/create` → `06-fundamentals/items.md`, `06-fundamentals/link.md`, `07-partnerships/processor-partners.md`, `04-credit-and-underwriting/check.md`, `04-credit-and-underwriting/income.md`, `01-payments-and-funding/payment-initiation.md`, `02-financial-insights/transactions.md`, `01-payments-and-funding/transfer/initiating-transfers.md`, `06-fundamentals/users.md`, `06-fundamentals/users/migrate-to-new-user-apis.md`, `00-overview/webhooks.md`
+- `/link/token/get` → `06-fundamentals/link.md`, `05-instant-onboarding/layer.md`
+- `/network/status/get` → `06-fundamentals/network.md`
+- `/oauth/introspect` → `06-fundamentals/oauth.md`
+- `/oauth/revoke` → `06-fundamentals/oauth.md`
+- `/oauth/token` → `06-fundamentals/oauth.md`
+- `/partner/customer/create` → `07-partnerships/partner.md`
+- `/partner/customer/enable` → `07-partnerships/partner.md`
+- `/partner/customer/get` → `07-partnerships/partner.md`
+- `/partner/customer/oauth_institutions/get` → `07-partnerships/partner.md`
+- `/partner/customer/remove` → `07-partnerships/partner.md`
+- `/payment_initiation/consent/create` → `01-payments-and-funding/payment-initiation.md`
+- `/payment_initiation/consent/get` → `01-payments-and-funding/payment-initiation.md`
+- `/payment_initiation/consent/payment/execute` → `01-payments-and-funding/payment-initiation.md`
+- `/payment_initiation/consent/revoke` → `01-payments-and-funding/payment-initiation.md`
+- `/payment_initiation/payment/create` → `01-payments-and-funding/payment-initiation.md`
+- `/payment_initiation/payment/get` → `01-payments-and-funding/payment-initiation.md`
+- `/payment_initiation/payment/list` → `01-payments-and-funding/payment-initiation.md`
+- `/payment_initiation/payment/reverse` → `01-payments-and-funding/payment-initiation.md`, `01-payments-and-funding/virtual-accounts.md`
+- `/payment_initiation/recipient/create` → `01-payments-and-funding/payment-initiation.md`
+- `/payment_initiation/recipient/get` → `01-payments-and-funding/payment-initiation.md`
+- `/payment_initiation/recipient/list` → `01-payments-and-funding/payment-initiation.md`
+- `/processor/account/get` → `07-partnerships/processor-partners.md`
+- `/processor/auth/get` → `07-partnerships/processor-partners.md`, `01-payments-and-funding/auth.md`, `00-overview/versioning.md`
+- `/processor/balance/get` → `07-partnerships/processor-partners.md`, `01-payments-and-funding/signal-and-balance.md`
+- `/processor/identity/get` → `07-partnerships/processor-partners.md`
+- `/processor/identity/match` → `07-partnerships/processor-partners.md`
+- `/processor/investments/auth/get` → `07-partnerships/processor-partners.md`, `01-payments-and-funding/investments-move.md`
+- `/processor/investments/holdings/get` → `07-partnerships/processor-partners.md`, `02-financial-insights/investments.md`
+- `/processor/investments/transactions/get` → `07-partnerships/processor-partners.md`, `02-financial-insights/investments.md`
+- `/processor/liabilities/get` → `07-partnerships/processor-partners.md`
+- `/processor/signal/decision/report` → `07-partnerships/processor-partners.md`, `01-payments-and-funding/signal-and-balance.md`
+- `/processor/signal/evaluate` → `07-partnerships/processor-partners.md`, `01-payments-and-funding/signal-and-balance.md`
+- `/processor/signal/prepare` → `07-partnerships/processor-partners.md`, `01-payments-and-funding/signal-and-balance.md`
+- `/processor/signal/return/report` → `07-partnerships/processor-partners.md`, `01-payments-and-funding/signal-and-balance.md`
+- `/processor/stripe/bank_account_token/create` → `07-partnerships/processors.md`, `01-payments-and-funding/auth.md`
+- `/processor/token/create` → `07-partnerships/processors.md`, `01-payments-and-funding/auth.md`, `01-payments-and-funding/signal-and-balance.md`
+- `/processor/token/permissions/get` → `07-partnerships/processors.md`
+- `/processor/token/permissions/set` → `07-partnerships/processors.md`
+- `/processor/token/webhook/update` → `07-partnerships/processor-partners.md`
+- `/processor/transactions/get` → `07-partnerships/processor-partners.md`, `02-financial-insights/transactions.md`
+- `/processor/transactions/recurring/get` → `07-partnerships/processor-partners.md`, `02-financial-insights/transactions.md`
+- `/processor/transactions/refresh` → `07-partnerships/processor-partners.md`, `02-financial-insights/transactions.md`
+- `/processor/transactions/sync` → `07-partnerships/processor-partners.md`, `02-financial-insights/transactions.md`
+- `/sandbox/cra/cashflow_updates/update` → `04-credit-and-underwriting/check.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/income/fire_webhook` → `04-credit-and-underwriting/income.md`, `06-fundamentals/sandbox.md`, `00-overview/webhooks.md`
+- `/sandbox/item/fire_webhook` → `06-fundamentals/items.md`, `02-financial-insights/investments.md`, `02-financial-insights/transactions.md`, `06-fundamentals/sandbox.md`, `00-overview/webhooks.md`
+- `/sandbox/item/reset_login` → `06-fundamentals/items.md`, `06-fundamentals/link.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/item/set_verification_status` → `06-fundamentals/items.md`, `01-payments-and-funding/auth.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/payment/simulate` → `01-payments-and-funding/payment-initiation.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/processor_token/create` → `07-partnerships/processors.md`, `01-payments-and-funding/auth.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/public_token/create` → `06-fundamentals/items.md`, `06-fundamentals/link.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/transactions/create` → `02-financial-insights/transactions.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/transfer/fire_webhook` → `01-payments-and-funding/transfer.md`, `06-fundamentals/sandbox.md`, `00-overview/webhooks.md`
+- `/sandbox/transfer/ledger/deposit/simulate` → `01-payments-and-funding/transfer.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/transfer/ledger/simulate_available` → `01-payments-and-funding/transfer.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/transfer/ledger/withdraw/simulate` → `01-payments-and-funding/transfer.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/transfer/refund/simulate` → `01-payments-and-funding/transfer.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/transfer/simulate` → `01-payments-and-funding/transfer.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/transfer/test_clock/advance` → `01-payments-and-funding/transfer.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/transfer/test_clock/create` → `01-payments-and-funding/transfer.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/transfer/test_clock/get` → `01-payments-and-funding/transfer.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/transfer/test_clock/list` → `01-payments-and-funding/transfer.md`, `06-fundamentals/sandbox.md`
+- `/sandbox/user/reset_login` → `06-fundamentals/sandbox.md`, `06-fundamentals/users.md`
+- `/session/token/create` → `06-fundamentals/link.md`, `05-instant-onboarding/layer.md`
+- `/signal/decision/report` → `01-payments-and-funding/signal-and-balance.md`
+- `/signal/evaluate` → `06-fundamentals/accounts.md`, `01-payments-and-funding/identity.md`, `01-payments-and-funding/signal-and-balance.md`
+- `/signal/prepare` → `06-fundamentals/link.md`, `01-payments-and-funding/signal-and-balance.md`
+- `/signal/return/report` → `01-payments-and-funding/signal-and-balance.md`
+- `/statements/download` → `04-credit-and-underwriting/statements.md`
+- `/statements/list` → `04-credit-and-underwriting/statements.md`
+- `/statements/refresh` → `04-credit-and-underwriting/statements.md`
+- `/transactions/enrich` → `02-financial-insights/enrich.md`
+- `/transactions/get` → `02-financial-insights/transactions.md`, `06-fundamentals/sandbox.md`
+- `/transactions/recurring/get` → `02-financial-insights/transactions.md`
+- `/transactions/refresh` → `02-financial-insights/transactions.md`
+- `/transactions/sync` → `02-financial-insights/transactions.md`, `06-fundamentals/sandbox.md`
+- `/transfer/authorization/cancel` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/initiating-transfers.md`
+- `/transfer/authorization/create` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/initiating-transfers.md`
+- `/transfer/cancel` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/initiating-transfers.md`
+- `/transfer/capabilities/get` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/account-linking.md`
+- `/transfer/configuration/get` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/metrics.md`
+- `/transfer/create` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/initiating-transfers.md`
+- `/transfer/event/list` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/reading-transfers.md`, `06-fundamentals/sandbox.md`
+- `/transfer/event/sync` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/reading-transfers.md`, `06-fundamentals/sandbox.md`
+- `/transfer/get` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/initiating-transfers.md`, `01-payments-and-funding/transfer/reading-transfers.md`
+- `/transfer/intent/create` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/account-linking.md`
+- `/transfer/intent/get` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/account-linking.md`
+- `/transfer/ledger/deposit` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/ledger.md`
+- `/transfer/ledger/distribute` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/ledger.md`
+- `/transfer/ledger/event/list` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/ledger.md`
+- `/transfer/ledger/get` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/ledger.md`
+- `/transfer/ledger/withdraw` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/ledger.md`
+- `/transfer/list` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/reading-transfers.md`
+- `/transfer/metrics/get` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/metrics.md`
+- `/transfer/migrate_account` → `06-fundamentals/accounts.md`, `06-fundamentals/items.md`, `01-payments-and-funding/auth.md`, `01-payments-and-funding/identity.md`, `01-payments-and-funding/investments-move.md`, `02-financial-insights/investments.md`, `02-financial-insights/liabilities.md`, `01-payments-and-funding/signal-and-balance.md`, `02-financial-insights/transactions.md`, `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/account-linking.md`, `06-fundamentals/users.md`
+- `/transfer/originator/funding_account/create` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/platform-payments.md`
+- `/transfer/originator/get` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/platform-payments.md`
+- `/transfer/originator/list` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/platform-payments.md`
+- `/transfer/platform/document/submit` → `01-payments-and-funding/transfer/platform-payments.md`
+- `/transfer/platform/originator/create` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/platform-payments.md`
+- `/transfer/platform/person/create` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/platform-payments.md`
+- `/transfer/platform/requirement/submit` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/platform-payments.md`
+- `/transfer/recurring/cancel` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/recurring-transfers.md`
+- `/transfer/recurring/create` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/recurring-transfers.md`
+- `/transfer/recurring/get` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/recurring-transfers.md`
+- `/transfer/recurring/list` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/recurring-transfers.md`
+- `/transfer/refund/cancel` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/refunds.md`
+- `/transfer/refund/create` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/refunds.md`
+- `/transfer/refund/get` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/refunds.md`
+- `/transfer/sweep/get` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/reading-transfers.md`
+- `/transfer/sweep/list` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/reading-transfers.md`
+- `/user/create` → `04-credit-and-underwriting/check.md`, `04-credit-and-underwriting/income.md`, `06-fundamentals/users.md`, `06-fundamentals/users/migrate-to-new-user-apis.md`, `06-fundamentals/users/user-apis.md`
+- `/user/get` → `06-fundamentals/users.md`, `06-fundamentals/users/migrate-to-new-user-apis.md`, `06-fundamentals/users/user-apis.md`
+- `/user/items/get` → `04-credit-and-underwriting/check.md`, `06-fundamentals/users.md`
+- `/user/items/remove` → `06-fundamentals/users.md`
+- `/user/products/terminate` → `06-fundamentals/users.md`
+- `/user/remove` → `06-fundamentals/users/migrate-to-new-user-apis.md`, `06-fundamentals/users/user-apis.md`
+- `/user/update` → `04-credit-and-underwriting/check.md`, `03-kyc-aml-anti-fraud/identity-verification.md`, `04-credit-and-underwriting/income.md`, `06-fundamentals/users.md`, `06-fundamentals/users/user-apis.md`
+- `/user_account/session/get` → `05-instant-onboarding/layer.md`
+- `/wallet/create` → `01-payments-and-funding/payment-initiation.md`, `01-payments-and-funding/virtual-accounts.md`
+- `/wallet/get` → `01-payments-and-funding/payment-initiation.md`, `01-payments-and-funding/virtual-accounts.md`
+- `/wallet/list` → `01-payments-and-funding/payment-initiation.md`, `01-payments-and-funding/virtual-accounts.md`
+- `/wallet/transaction/execute` → `01-payments-and-funding/payment-initiation.md`, `01-payments-and-funding/virtual-accounts.md`
+- `/wallet/transaction/get` → `01-payments-and-funding/payment-initiation.md`, `01-payments-and-funding/virtual-accounts.md`
+- `/wallet/transaction/list` → `01-payments-and-funding/payment-initiation.md`, `01-payments-and-funding/virtual-accounts.md`
+- `/watchlist_screening/entity/create` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/entity/get` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/entity/history/list` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/entity/hit/list` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/entity/list` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/entity/program/get` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/entity/program/list` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/entity/review/create` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/entity/review/list` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/entity/update` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/individual/create` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/individual/get` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/individual/history/list` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/individual/hit/list` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/individual/list` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/individual/program/get` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/individual/program/list` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/individual/review/create` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/individual/review/list` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/watchlist_screening/individual/update` → `03-kyc-aml-anti-fraud/monitor.md`
+- `/webhook_verification_key/get` → `00-overview/webhooks/webhook-verification.md`
+- `403B` → `06-fundamentals/accounts.md`
+- `ADA` → `06-fundamentals/accounts.md`
+- `API endpoints and webhooks` → `00-overview/overview.md`
+- `AUTOMATICALLY_VERIFIED` → `01-payments-and-funding/auth.md`
+- `Asset Report webhooks` → `04-credit-and-underwriting/assets.md`
+- `BANK_TRANSFERS_EVENTS_UPDATE` → `01-payments-and-funding/auth.md`
+- `BAT` → `06-fundamentals/accounts.md`
+- `BCH` → `06-fundamentals/accounts.md`
+- `BNB` → `06-fundamentals/accounts.md`
+- `BSV` → `06-fundamentals/accounts.md`
+- `BTC` → `06-fundamentals/accounts.md`
+- `BTG` → `06-fundamentals/accounts.md`
+- `Best practices for applications using webhooks` → `00-overview/webhooks.md`
+- `CASH_FLOW_INSIGHTS_UPDATED` → `04-credit-and-underwriting/check.md`
+- `CHECK_REPORT_FAILED` → `04-credit-and-underwriting/check.md`
+- `CHECK_REPORT_READY` → `04-credit-and-underwriting/check.md`
+- `CNH` → `06-fundamentals/accounts.md`
+- `CONSENT_STATUS_UPDATE` → `01-payments-and-funding/payment-initiation.md`
+- `Cash flow updates webhooks` → `04-credit-and-underwriting/check.md`
+- `Configuring webhooks` → `00-overview/webhooks.md`
+- `DASH` → `06-fundamentals/accounts.md`
+- `DEFAULT_UPDATE` → `07-partnerships/processor-partners.md`, `01-payments-and-funding/auth.md`, `01-payments-and-funding/identity.md`, `02-financial-insights/liabilities.md`, `02-financial-insights/transactions.md`
+- `DOGE` → `06-fundamentals/accounts.md`
+- `END_CUSTOMER_OAUTH_STATUS_UPDATED` → `07-partnerships/partner.md`
+- `ENTITY_SCREENING: STATUS_UPDATED` → `03-kyc-aml-anti-fraud/monitor.md`
+- `ERROR` → `06-fundamentals/items.md`, `04-credit-and-underwriting/assets.md`
+- `ETC` → `06-fundamentals/accounts.md`
+- `ETH` → `06-fundamentals/accounts.md`
+- `EVENTS` → `06-fundamentals/link.md`
+- `Fire a test webhook` → `06-fundamentals/sandbox.md`
+- `GBX` → `06-fundamentals/accounts.md`
+- `Get webhook verification key` → `00-overview/webhooks/webhook-verification.md`
+- `HISTORICAL_UPDATE` → `07-partnerships/processor-partners.md`, `02-financial-insights/transactions.md`
+- `HOLDINGS: DEFAULT_UPDATE` → `02-financial-insights/investments.md`
+- `INCOME_VERIFICATION` → `04-credit-and-underwriting/income.md`
+- `INCOME_VERIFICATION_REFRESH_RECONNECT_NEEDED` → `04-credit-and-underwriting/income.md`
+- `INCOME_VERIFICATION_RISK_SIGNALS` → `04-credit-and-underwriting/income.md`
+- `INITIAL_UPDATE` → `02-financial-insights/transactions.md`
+- `INSIGHTS_UPDATED` → `04-credit-and-underwriting/check.md`
+- `INSTITUTION_STATUS_ALERT_TRIGGERED` → `06-fundamentals/institutions.md`
+- `INVALID_ACCOUNT_ID` → `01-payments-and-funding/signal-and-balance.md`
+- `INVALID_FIELD` → `07-partnerships/processor-partners.md`, `01-payments-and-funding/signal-and-balance.md`
+- `INVESTMENTS_TRANSACTIONS: DEFAULT_UPDATE` → `02-financial-insights/investments.md`
+- `INVESTMENTS_TRANSACTIONS: HISTORICAL_UPDATE` → `02-financial-insights/investments.md`
+- `ITEM_ADD_RESULT` → `06-fundamentals/link.md`
+- `Introduction to webhooks` → `00-overview/webhooks.md`
+- `LARGE_DEPOSIT_DETECTED` → `04-credit-and-underwriting/check.md`
+- `LAYER_AUTHENTICATION_PASSED` → `05-instant-onboarding/layer.md`
+- `LOGIN_REPAIRED` → `06-fundamentals/items.md`
+- `LOW_BALANCE_DETECTED` → `04-credit-and-underwriting/check.md`
+- `LSK` → `06-fundamentals/accounts.md`
+- `Manually fire a Transfer webhook` → `06-fundamentals/sandbox.md`
+- `Manually fire an Income webhook` → `06-fundamentals/sandbox.md`
+- `NEO` → `06-fundamentals/accounts.md`
+- `NEW_ACCOUNTS_AVAILABLE` → `06-fundamentals/accounts.md`, `06-fundamentals/items.md`
+- `NEW_LOAN_PAYMENT_DETECTED` → `04-credit-and-underwriting/check.md`
+- `NSF_OVERDRAFT_DETECTED` → `04-credit-and-underwriting/check.md`
+- `OMG` → `06-fundamentals/accounts.md`
+- `PAYMENT_STATUS_UPDATE` → `01-payments-and-funding/payment-initiation.md`
+- `PENDING_DISCONNECT` → `06-fundamentals/items.md`
+- `PENDING_EXPIRATION` → `06-fundamentals/items.md`
+- `PRODUCT_READY` → `04-credit-and-underwriting/assets.md`
+- `Processor webhooks` → `07-partnerships/processor-partners.md`
+- `QTUM` → `06-fundamentals/accounts.md`
+- `RECURRING_CANCELLED` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/recurring-transfers.md`
+- `RECURRING_NEW_TRANSFER` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/recurring-transfers.md`
+- `RECURRING_TRANSACTIONS_UPDATE` → `07-partnerships/processor-partners.md`, `02-financial-insights/transactions.md`
+- `RECURRING_TRANSFER_SKIPPED` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/recurring-transfers.md`
+- `RETRIED` → `03-kyc-aml-anti-fraud/identity-verification.md`
+- `SCREENING: STATUS_UPDATED` → `03-kyc-aml-anti-fraud/monitor.md`
+- `SESSION_FINISHED` → `06-fundamentals/link.md`, `05-instant-onboarding/layer.md`
+- `SMS_MICRODEPOSITS_VERIFICATION` → `01-payments-and-funding/auth.md`
+- `STATEMENTS_REFRESH_COMPLETE` → `04-credit-and-underwriting/statements.md`
+- `STATUS_UPDATED` → `03-kyc-aml-anti-fraud/identity-verification.md`
+- `STEP_UPDATED` → `03-kyc-aml-anti-fraud/identity-verification.md`
+- `SYNC_UPDATES_AVAILABLE` → `07-partnerships/processor-partners.md`, `02-financial-insights/transactions.md`
+- `Steps to verify webhooks` → `00-overview/webhooks/webhook-verification.md`
+- `TRANSACTIONS_REMOVED` → `07-partnerships/processor-partners.md`, `02-financial-insights/transactions.md`
+- `TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION` → `07-partnerships/processor-partners.md`, `02-financial-insights/transactions.md`
+- `TRANSFER_EVENTS_UPDATE` → `01-payments-and-funding/transfer.md`, `01-payments-and-funding/transfer/reading-transfers.md`
+- `Testing webhooks in Sandbox` → `00-overview/webhooks.md`
+- `USDT` → `06-fundamentals/accounts.md`
+- `USER_ACCOUNT_REVOKED` → `06-fundamentals/items.md`
+- `USER_CHECK_REPORT_FAILED` → `04-credit-and-underwriting/check.md`
+- `USER_CHECK_REPORT_READY` → `04-credit-and-underwriting/check.md`
+- `USER_PERMISSION_REVOKED` → `06-fundamentals/items.md`
+- `Update Webhook URL` → `06-fundamentals/items.md`
+- `Update a processor token's webhook URL` → `07-partnerships/processor-partners.md`
+- `Update webhook handling` → `06-fundamentals/users/migrate-to-new-user-apis.md`
+- `VERIFICATION_EXPIRED` → `01-payments-and-funding/auth.md`
+- `Validate the webhook` → `00-overview/webhooks/webhook-verification.md`
+- `WALLET_TRANSACTION_STATUS_UPDATE` → `01-payments-and-funding/payment-initiation.md`, `01-payments-and-funding/virtual-accounts.md`
+- `WEBHOOK_UPDATE_ACKNOWLEDGED` → `06-fundamentals/items.md`, `07-partnerships/processor-partners.md`
+- `Webhook retries` → `00-overview/webhooks.md`
+- `Webhooks` → `06-fundamentals/institutions.md`, `06-fundamentals/items.md`, `06-fundamentals/link.md`, `07-partnerships/partner.md`, `04-credit-and-underwriting/assets.md`, `01-payments-and-funding/auth.md`, `04-credit-and-underwriting/check.md`, `03-kyc-aml-anti-fraud/identity-verification.md`, `04-credit-and-underwriting/income.md`, `02-financial-insights/investments.md`, `05-instant-onboarding/layer.md`, `02-financial-insights/liabilities.md`, `03-kyc-aml-anti-fraud/monitor.md`, `01-payments-and-funding/payment-initiation.md`, `04-credit-and-underwriting/statements.md`, `02-financial-insights/transactions.md`, `01-payments-and-funding/transfer/reading-transfers.md`, `01-payments-and-funding/transfer/recurring-transfers.md`, `01-payments-and-funding/virtual-accounts.md`
+- `Webhooks (beta)` → `01-payments-and-funding/identity.md`
+- `XLM` → `06-fundamentals/accounts.md`
+- `XMR` → `06-fundamentals/accounts.md`
+- `XRP` → `06-fundamentals/accounts.md`
+- `ZEC` → `06-fundamentals/accounts.md`
+- `ZRX` → `06-fundamentals/accounts.md`
+- `firing webhooks in Sandbox` → `00-overview/webhooks/webhook-verification.md`
+- `last_webhook` → `06-fundamentals/items.md`
+- `new_webhook_url` → `06-fundamentals/items.md`, `07-partnerships/processor-partners.md`
+- `webhook` → `06-fundamentals/accounts.md`, `06-fundamentals/items.md`, `06-fundamentals/link.md`, `07-partnerships/processor-partners.md`, `04-credit-and-underwriting/assets.md`, `01-payments-and-funding/auth.md`, `04-credit-and-underwriting/check.md`, `01-payments-and-funding/identity.md`, `04-credit-and-underwriting/income.md`, `01-payments-and-funding/investments-move.md`, `02-financial-insights/investments.md`, `05-instant-onboarding/layer.md`, `02-financial-insights/liabilities.md`, `01-payments-and-funding/signal-and-balance.md`, `02-financial-insights/transactions.md`, `01-payments-and-funding/transfer/platform-payments.md`, `06-fundamentals/sandbox.md`, `06-fundamentals/users.md`
+- `webhook retries` → `06-fundamentals/users/migrate-to-new-user-apis.md`
+- `webhook_code` → `06-fundamentals/institutions.md`, `06-fundamentals/items.md`, `06-fundamentals/link.md`, `07-partnerships/partner.md`, `07-partnerships/processor-partners.md`, `04-credit-and-underwriting/assets.md`, `01-payments-and-funding/auth.md`, `04-credit-and-underwriting/check.md`, `03-kyc-aml-anti-fraud/identity-verification.md`, `01-payments-and-funding/identity.md`, `04-credit-and-underwriting/income.md`, `02-financial-insights/investments.md`, `05-instant-onboarding/layer.md`, `02-financial-insights/liabilities.md`, `03-kyc-aml-anti-fraud/monitor.md`, `01-payments-and-funding/payment-initiation.md`, `04-credit-and-underwriting/statements.md`, `02-financial-insights/transactions.md`, `01-payments-and-funding/transfer/reading-transfers.md`, `01-payments-and-funding/transfer/recurring-transfers.md`, `01-payments-and-funding/virtual-accounts.md`, `06-fundamentals/sandbox.md`
+- `webhook_codes` → `06-fundamentals/sandbox.md`
+- `webhook_fired` → `06-fundamentals/sandbox.md`
+- `webhook_type` → `06-fundamentals/institutions.md`, `06-fundamentals/items.md`, `06-fundamentals/link.md`, `07-partnerships/partner.md`, `07-partnerships/processor-partners.md`, `04-credit-and-underwriting/assets.md`, `01-payments-and-funding/auth.md`, `04-credit-and-underwriting/check.md`, `03-kyc-aml-anti-fraud/identity-verification.md`, `01-payments-and-funding/identity.md`, `04-credit-and-underwriting/income.md`, `02-financial-insights/investments.md`, `05-instant-onboarding/layer.md`, `02-financial-insights/liabilities.md`, `03-kyc-aml-anti-fraud/monitor.md`, `01-payments-and-funding/payment-initiation.md`, `04-credit-and-underwriting/statements.md`, `02-financial-insights/transactions.md`, `01-payments-and-funding/transfer/reading-transfers.md`, `01-payments-and-funding/transfer/recurring-transfers.md`, `01-payments-and-funding/virtual-accounts.md`, `06-fundamentals/sandbox.md`

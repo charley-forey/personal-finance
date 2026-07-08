@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd ../.. && npm install && npm run build --filter=@pf/web",
+  "outputDirectory": "apps/web/.next",
+  "framework": "nextjs",
+  "installCommand": "npm install"
+}

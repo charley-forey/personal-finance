@@ -1,0 +1,17 @@
+node_modules
+.turbo
+dist
+.next
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+coverage
+.vercel
+.railway
+apps/api/dist
+apps/web/.next
+packages/*/dist
+workers/dist
+drizzle/meta

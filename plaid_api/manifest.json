@@ -1,0 +1,289 @@
+{
+  "generated_at": "2026-07-07T23:48:52Z",
+  "base_url": "https://plaid.com",
+  "page_count": 47,
+  "pages": [
+    {
+      "title": "Client Libraries",
+      "path": "00-overview/libraries.md",
+      "source_url": "https://plaid.com/docs/api/libraries/",
+      "section": "Overview"
+    },
+    {
+      "title": "API Reference Overview",
+      "path": "00-overview/overview.md",
+      "source_url": "https://plaid.com/docs/api/",
+      "section": "Overview"
+    },
+    {
+      "title": "Postman Collection",
+      "path": "00-overview/postman.md",
+      "source_url": "https://plaid.com/docs/api/postman/",
+      "section": "Overview"
+    },
+    {
+      "title": "API Versioning",
+      "path": "00-overview/versioning.md",
+      "source_url": "https://plaid.com/docs/api/versioning/",
+      "section": "Overview"
+    },
+    {
+      "title": "Webhooks",
+      "path": "00-overview/webhooks.md",
+      "source_url": "https://plaid.com/docs/api/webhooks/",
+      "section": "Overview"
+    },
+    {
+      "title": "Webhooks / Webhook Verification",
+      "path": "00-overview/webhooks/webhook-verification.md",
+      "source_url": "https://plaid.com/docs/api/webhooks/webhook-verification/",
+      "section": "Overview"
+    },
+    {
+      "title": "Auth",
+      "path": "01-payments-and-funding/auth.md",
+      "source_url": "https://plaid.com/docs/api/products/auth/",
+      "section": "Payments and Funding"
+    },
+    {
+      "title": "Identity",
+      "path": "01-payments-and-funding/identity.md",
+      "source_url": "https://plaid.com/docs/api/products/identity/",
+      "section": "Payments and Funding"
+    },
+    {
+      "title": "Investments Move",
+      "path": "01-payments-and-funding/investments-move.md",
+      "source_url": "https://plaid.com/docs/api/products/investments-move/",
+      "section": "Payments and Funding"
+    },
+    {
+      "title": "Payment Initiation (Europe)",
+      "path": "01-payments-and-funding/payment-initiation.md",
+      "source_url": "https://plaid.com/docs/api/products/payment-initiation/",
+      "section": "Payments and Funding"
+    },
+    {
+      "title": "Signal and Balance",
+      "path": "01-payments-and-funding/signal-and-balance.md",
+      "source_url": "https://plaid.com/docs/api/products/signal/",
+      "section": "Payments and Funding"
+    },
+    {
+      "title": "Transfer",
+      "path": "01-payments-and-funding/transfer.md",
+      "source_url": "https://plaid.com/docs/api/products/transfer/",
+      "section": "Payments and Funding"
+    },
+    {
+      "title": "Transfer / Account Linking",
+      "path": "01-payments-and-funding/transfer/account-linking.md",
+      "source_url": "https://plaid.com/docs/api/products/transfer/account-linking/",
+      "section": "Payments and Funding"
+    },
+    {
+      "title": "Transfer / Initiating Transfers",
+      "path": "01-payments-and-funding/transfer/initiating-transfers.md",
+      "source_url": "https://plaid.com/docs/api/products/transfer/initiating-transfers/",
+      "section": "Payments and Funding"
+    },
+    {
+      "title": "Transfer / Ledger",
+      "path": "01-payments-and-funding/transfer/ledger.md",
+      "source_url": "https://plaid.com/docs/api/products/transfer/ledger/",
+      "section": "Payments and Funding"
+    },
+    {
+      "title": "Transfer / Metrics",
+      "path": "01-payments-and-funding/transfer/metrics.md",
+      "source_url": "https://plaid.com/docs/api/products/transfer/metrics/",
+      "section": "Payments and Funding"
+    },
+    {
+      "title": "Transfer / Platform Payments",
+      "path": "01-payments-and-funding/transfer/platform-payments.md",
+      "source_url": "https://plaid.com/docs/api/products/transfer/platform-payments/",
+      "section": "Payments and Funding"
+    },
+    {
+      "title": "Transfer / Reading Transfers",
+      "path": "01-payments-and-funding/transfer/reading-transfers.md",
+      "source_url": "https://plaid.com/docs/api/products/transfer/reading-transfers/",
+      "section": "Payments and Funding"
+    },
+    {
+      "title": "Transfer / Recurring Transfers",
+      "path": "01-payments-and-funding/transfer/recurring-transfers.md",
+      "source_url": "https://plaid.com/docs/api/products/transfer/recurring-transfers/",
+      "section": "Payments and Funding"
+    },
+    {
+      "title": "Transfer / Refunds",
+      "path": "01-payments-and-funding/transfer/refunds.md",
+      "source_url": "https://plaid.com/docs/api/products/transfer/refunds/",
+      "section": "Payments and Funding"
+    },
+    {
+      "title": "Virtual Accounts",
+      "path": "01-payments-and-funding/virtual-accounts.md",
+      "source_url": "https://plaid.com/docs/api/products/virtual-accounts/",
+      "section": "Payments and Funding"
+    },
+    {
+      "title": "Enrich",
+      "path": "02-financial-insights/enrich.md",
+      "source_url": "https://plaid.com/docs/api/products/enrich/",
+      "section": "Financial Insights"
+    },
+    {
+      "title": "Investments",
+      "path": "02-financial-insights/investments.md",
+      "source_url": "https://plaid.com/docs/api/products/investments/",
+      "section": "Financial Insights"
+    },
+    {
+      "title": "Liabilities",
+      "path": "02-financial-insights/liabilities.md",
+      "source_url": "https://plaid.com/docs/api/products/liabilities/",
+      "section": "Financial Insights"
+    },
+    {
+      "title": "Transactions",
+      "path": "02-financial-insights/transactions.md",
+      "source_url": "https://plaid.com/docs/api/products/transactions/",
+      "section": "Financial Insights"
+    },
+    {
+      "title": "Identity Verification",
+      "path": "03-kyc-aml-anti-fraud/identity-verification.md",
+      "source_url": "https://plaid.com/docs/api/products/identity-verification/",
+      "section": "KYC/AML and Anti-Fraud"
+    },
+    {
+      "title": "Look up Dashboard Users",
+      "path": "03-kyc-aml-anti-fraud/kyc-aml-users.md",
+      "source_url": "https://plaid.com/docs/api/kyc-aml-users/",
+      "section": "KYC/AML and Anti-Fraud"
+    },
+    {
+      "title": "Monitor",
+      "path": "03-kyc-aml-anti-fraud/monitor.md",
+      "source_url": "https://plaid.com/docs/api/products/monitor/",
+      "section": "KYC/AML and Anti-Fraud"
+    },
+    {
+      "title": "Assets",
+      "path": "04-credit-and-underwriting/assets.md",
+      "source_url": "https://plaid.com/docs/api/products/assets/",
+      "section": "Credit and Underwriting"
+    },
+    {
+      "title": "Consumer Report (Plaid Check)",
+      "path": "04-credit-and-underwriting/check.md",
+      "source_url": "https://plaid.com/docs/api/products/check/",
+      "section": "Credit and Underwriting"
+    },
+    {
+      "title": "Income",
+      "path": "04-credit-and-underwriting/income.md",
+      "source_url": "https://plaid.com/docs/api/products/income/",
+      "section": "Credit and Underwriting"
+    },
+    {
+      "title": "Statements",
+      "path": "04-credit-and-underwriting/statements.md",
+      "source_url": "https://plaid.com/docs/api/products/statements/",
+      "section": "Credit and Underwriting"
+    },
+    {
+      "title": "Plaid Layer",
+      "path": "05-instant-onboarding/layer.md",
+      "source_url": "https://plaid.com/docs/api/products/layer/",
+      "section": "Instant Onboarding"
+    },
+    {
+      "title": "Accounts",
+      "path": "06-fundamentals/accounts.md",
+      "source_url": "https://plaid.com/docs/api/accounts/",
+      "section": "Fundamentals"
+    },
+    {
+      "title": "Consent",
+      "path": "06-fundamentals/consent.md",
+      "source_url": "https://plaid.com/docs/api/consent/",
+      "section": "Fundamentals"
+    },
+    {
+      "title": "Institutions",
+      "path": "06-fundamentals/institutions.md",
+      "source_url": "https://plaid.com/docs/api/institutions/",
+      "section": "Fundamentals"
+    },
+    {
+      "title": "Items",
+      "path": "06-fundamentals/items.md",
+      "source_url": "https://plaid.com/docs/api/items/",
+      "section": "Fundamentals"
+    },
+    {
+      "title": "Link",
+      "path": "06-fundamentals/link.md",
+      "source_url": "https://plaid.com/docs/api/link/",
+      "section": "Fundamentals"
+    },
+    {
+      "title": "Network",
+      "path": "06-fundamentals/network.md",
+      "source_url": "https://plaid.com/docs/api/network/",
+      "section": "Fundamentals"
+    },
+    {
+      "title": "OAuth",
+      "path": "06-fundamentals/oauth.md",
+      "source_url": "https://plaid.com/docs/api/oauth/",
+      "section": "Fundamentals"
+    },
+    {
+      "title": "Sandbox",
+      "path": "06-fundamentals/sandbox.md",
+      "source_url": "https://plaid.com/docs/api/sandbox/",
+      "section": "Fundamentals"
+    },
+    {
+      "title": "Users",
+      "path": "06-fundamentals/users.md",
+      "source_url": "https://plaid.com/docs/api/users/",
+      "section": "Fundamentals"
+    },
+    {
+      "title": "Users / Migrate To New User Apis",
+      "path": "06-fundamentals/users/migrate-to-new-user-apis.md",
+      "source_url": "https://plaid.com/docs/api/users/migrate-to-new-user-apis/",
+      "section": "Fundamentals"
+    },
+    {
+      "title": "Users / User Apis",
+      "path": "06-fundamentals/users/user-apis.md",
+      "source_url": "https://plaid.com/docs/api/users/user-apis/",
+      "section": "Fundamentals"
+    },
+    {
+      "title": "Reseller Partners",
+      "path": "07-partnerships/partner.md",
+      "source_url": "https://plaid.com/docs/api/partner/",
+      "section": "Partnerships"
+    },
+    {
+      "title": "Processor Partners",
+      "path": "07-partnerships/processor-partners.md",
+      "source_url": "https://plaid.com/docs/api/processor-partners/",
+      "section": "Partnerships"
+    },
+    {
+      "title": "Processor Tokens",
+      "path": "07-partnerships/processors.md",
+      "source_url": "https://plaid.com/docs/api/processors/",
+      "section": "Partnerships"
+    }
+  ]
+}
