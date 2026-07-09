@@ -2,10 +2,12 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Inbox, Wallet } from 'lucide-react';
 import { PageHeader, Card } from '@/components/app-shell';
-import { Badge, EmptyState, Skeleton, StatCard } from '@/components/ui';
+import { StatCardWithExplain } from '@/components/stat-card-with-explain';
+import { useNarrativeSession } from '@/hooks/use-finance';
+import { Button, Badge, EmptyState, Skeleton, StatCard } from '@/components/ui';
 import { PageError } from '@/components/page-states';
 import {
   useAccounts,
@@ -118,7 +120,9 @@ function buildUpcomingBills(
 }
 
 export default function DashboardPage() {
+  const [timeScope, setTimeScope] = useState<'today' | 'week' | 'month'>('month');
   const formatCurrency = useFormatCurrency();
+  const { data: sessionNarrative } = useNarrativeSession();
   const { data: accounts, isLoading: accountsLoading } = useAccounts();
   const { data: netWorthData, isLoading: nwLoading, error: nwError } = useNetWorth();
   const { data: cashFlow, isLoading: cfLoading } = useCashFlow();
@@ -165,6 +169,23 @@ export default function DashboardPage() {
         }
       />
 
+      {sessionNarrative && (
+        <p className="text-sm text-muted-foreground mb-4 rounded-lg border border-border/60 p-3">{sessionNarrative.content}</p>
+      )}
+
+      <div className="flex gap-2 mb-4">
+        {(['today', 'week', 'month'] as const).map((scope) => (
+          <Button
+            key={scope}
+            size="sm"
+            variant={timeScope === scope ? 'primary' : 'secondary'}
+            onClick={() => setTimeScope(scope)}
+          >
+            {scope.charAt(0).toUpperCase() + scope.slice(1)}
+          </Button>
+        ))}
+      </div>
+
       {nwError && <PageError message={nwError.message} />}
 
       {!accountsLoading && !hasAccounts && (
@@ -178,21 +199,22 @@ export default function DashboardPage() {
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 md:mb-8">
-        <StatCard
+        <StatCardWithExplain
           title="Net Worth"
           value={loading ? '—' : netWorth ? formatCurrency(netWorth.netWorth) : '—'}
         />
-        <StatCard
+        <StatCardWithExplain
           title="Total Assets"
           value={loading ? '—' : netWorth ? formatCurrency(netWorth.totalAssets) : '—'}
+          explainMetric="net_worth"
         />
-        <StatCard
+        <StatCardWithExplain
           title="Savings Rate"
           value={
             cfLoading ? '—' : cashFlow ? `${(cashFlow.savingsRate * 100).toFixed(1)}%` : '—'
           }
         />
-        <StatCard
+        <StatCardWithExplain
           title="Health Score"
           value={loading ? '—' : health ? `${health.overall}/100` : '—'}
         />

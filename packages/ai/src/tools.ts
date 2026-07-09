@@ -6,7 +6,11 @@ export type AgentToolName =
   | 'get_cash_flow'
   | 'run_monte_carlo'
   | 'simulate_debt'
-  | 'search_knowledge';
+  | 'search_knowledge'
+  | 'get_graph_neighbors'
+  | 'get_page_context'
+  | 'get_goal_impact'
+  | 'simulate_scenario';
 
 export interface ToolCallRecord {
   id: string;
@@ -81,6 +85,65 @@ export const AGENT_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           },
         },
         required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_graph_neighbors',
+      description: 'Get entities linked to a financial object in the graph (transactions, goals, budgets, etc.).',
+      parameters: {
+        type: 'object',
+        properties: {
+          entityType: { type: 'string' },
+          entityId: { type: 'string' },
+        },
+        required: ['entityType', 'entityId'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_page_context',
+      description: 'Get prioritized actions and headline context for a page route.',
+      parameters: {
+        type: 'object',
+        properties: {
+          route: { type: 'string', description: 'App route e.g. /app/budgets' },
+        },
+        required: ['route'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_goal_impact',
+      description: 'Estimate progress impact on a financial goal.',
+      parameters: {
+        type: 'object',
+        properties: {
+          goalId: { type: 'string' },
+          amount: { type: 'number' },
+        },
+        required: ['goalId'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'simulate_scenario',
+      description: 'Run or summarize a what-if financial scenario.',
+      parameters: {
+        type: 'object',
+        properties: {
+          scenarioType: { type: 'string' },
+          inputs: { type: 'object' },
+        },
+        required: ['scenarioType'],
       },
     },
   },

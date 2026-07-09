@@ -4,75 +4,48 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 import {
-  Activity,
-  Repeat,
   LayoutDashboard,
   Wallet,
-  ArrowLeftRight,
-  TrendingUp,
   PieChart,
+  TrendingUp,
   Target,
-  Bot,
   FileText,
-  Settings,
-  CreditCard,
-  Calculator,
   Home,
-  Flame,
-  Inbox,
-  Shield,
-  Building2,
   Menu,
   X,
-  Calendar,
-  FlaskConical,
-  Zap,
+  Inbox,
+  Bot,
+  Shield,
+  Settings,
+  ChevronDown,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useInbox } from '@/hooks/use-finance';
 import { Badge } from '@/components/ui';
 
-const NAV = [
-  { href: '/app', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/app/accounts', label: 'Accounts', icon: Wallet },
-  { href: '/app/transactions', label: 'Transactions', icon: ArrowLeftRight },
-  { href: '/app/activity', label: 'Activity', icon: Activity },
-  { href: '/app/subscriptions', label: 'Subscriptions', icon: Repeat },
-  { href: '/app/income', label: 'Income', icon: TrendingUp },
-  { href: '/app/expenses', label: 'Expenses', icon: CreditCard },
-  { href: '/app/pnl', label: 'P&L', icon: FileText },
-  { href: '/app/budgets', label: 'Budgets', icon: PieChart },
-  { href: '/app/investments', label: 'Investments', icon: TrendingUp },
-  { href: '/app/calendar', label: 'Bill Calendar', icon: Calendar },
-  { href: '/app/scenarios', label: 'Scenarios', icon: FlaskConical },
-  { href: '/app/rules', label: 'Rules', icon: Zap },
-  { href: '/app/credit', label: 'Credit', icon: CreditCard },
-  { href: '/app/net-worth', label: 'Net Worth', icon: TrendingUp },
-  { href: '/app/forecasts', label: 'Forecasts', icon: Calculator },
-  { href: '/app/retirement', label: 'Retirement', icon: Target },
-  { href: '/app/fire', label: 'FIRE', icon: Flame },
-  { href: '/app/taxes', label: 'Taxes', icon: FileText },
-  { href: '/app/debt', label: 'Debt', icon: CreditCard },
-  { href: '/app/goals', label: 'Goals', icon: Target },
-  { href: '/app/equity', label: 'Equity', icon: TrendingUp },
-  { href: '/app/life-plans', label: 'Life Plans', icon: Home },
+const HUB_NAV = [
+  { href: '/app', label: 'Command', icon: LayoutDashboard },
+  { href: '/app/cash-flow', label: 'Cash Flow', icon: Wallet },
+  { href: '/app/plan', label: 'Plan', icon: PieChart },
+  { href: '/app/wealth', label: 'Wealth', icon: TrendingUp },
+  { href: '/app/future', label: 'Future', icon: Target },
+  { href: '/app/library', label: 'Library', icon: FileText },
+];
+
+const COMMAND_LINKS = [
+  { href: '/app/inbox', label: 'Inbox', icon: Inbox },
   { href: '/app/insights', label: 'Insights', icon: TrendingUp },
   { href: '/app/agents', label: 'Agents', icon: Bot },
-  { href: '/app/inbox', label: 'Inbox', icon: Inbox },
-  { href: '/app/learn', label: 'Learn', icon: FileText },
-  { href: '/app/onboarding', label: 'Setup', icon: Settings },
-  { href: '/app/health', label: 'Health Score', icon: Shield },
-  { href: '/app/assets', label: 'Assets', icon: Building2 },
-  { href: '/app/documents', label: 'Documents', icon: FileText },
+  { href: '/app/health', label: 'Health', icon: Shield },
   { href: '/app/notifications', label: 'Notifications', icon: Inbox },
   { href: '/app/settings', label: 'Settings', icon: Settings },
 ];
 
 const MOBILE_NAV = [
   { href: '/app', label: 'Home', icon: LayoutDashboard },
-  { href: '/app/accounts', label: 'Accounts', icon: Wallet },
-  { href: '/app/transactions', label: 'Activity', icon: ArrowLeftRight },
-  { href: '/app/insights', label: 'Insights', icon: TrendingUp },
+  { href: '/app/cash-flow', label: 'Cash Flow', icon: Wallet },
+  { href: '/app/plan', label: 'Plan', icon: PieChart },
+  { href: '/app/future', label: 'Future', icon: Target },
   { href: '/app/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -83,6 +56,7 @@ function NavLink({
   active,
   onClick,
   badge,
+  indent,
 }: {
   href: string;
   label: string;
@@ -90,6 +64,7 @@ function NavLink({
   active: boolean;
   onClick?: () => void;
   badge?: number;
+  indent?: boolean;
 }) {
   return (
     <Link
@@ -98,6 +73,7 @@ function NavLink({
       onClick={onClick}
       className={clsx(
         'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+        indent && 'pl-9',
         active ? 'bg-primary/10 text-primary' : 'text-muted hover:text-foreground hover:bg-white/5',
       )}
     >
@@ -112,9 +88,25 @@ function NavLink({
   );
 }
 
+function hubActive(pathname: string, href: string) {
+  if (href === '/app') return pathname === '/app' || COMMAND_LINKS.some((l) => l.href === pathname);
+  if (href === '/app/cash-flow')
+    return pathname === href || pathname.startsWith('/app/accounts') || pathname.startsWith('/app/transactions') || pathname === '/app/subscriptions' || pathname === '/app/income' || pathname === '/app/expenses' || pathname === '/app/activity' || pathname === '/app/calendar';
+  if (href === '/app/plan')
+    return pathname === href || pathname.startsWith('/app/budgets') || pathname.startsWith('/app/pnl') || pathname.startsWith('/app/goals') || pathname.startsWith('/app/rules');
+  if (href === '/app/wealth')
+    return pathname === href || pathname.startsWith('/app/net-worth') || pathname.startsWith('/app/investments') || pathname.startsWith('/app/assets') || pathname.startsWith('/app/equity') || pathname.startsWith('/app/forecasts');
+  if (href === '/app/future')
+    return pathname === href || pathname.startsWith('/app/retirement') || pathname.startsWith('/app/fire') || pathname.startsWith('/app/debt') || pathname.startsWith('/app/credit') || pathname.startsWith('/app/taxes') || pathname.startsWith('/app/life-plans') || pathname.startsWith('/app/scenarios');
+  if (href === '/app/library')
+    return pathname === href || pathname.startsWith('/app/learn') || pathname.startsWith('/app/documents') || pathname.startsWith('/app/onboarding') || pathname.startsWith('/app/settings');
+  return pathname === href;
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(true);
   const { data: inbox } = useInbox();
   const inboxCount = (inbox?.uncategorized.length ?? 0) + (inbox?.anomalies.length ?? 0);
 
@@ -136,11 +128,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {menuOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 md:hidden"
-          onClick={() => setMenuOpen(false)}
-          aria-hidden
-        />
+        <div className="fixed inset-0 z-30 bg-black/50 md:hidden" onClick={() => setMenuOpen(false)} aria-hidden />
       )}
 
       <div className="flex min-h-[calc(100vh-3.5rem)] md:min-h-screen">
@@ -154,14 +142,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Home className="w-5 h-5 text-primary" />
             <span className="font-semibold text-lg">Finance OS</span>
           </Link>
-          {NAV.map((item) => (
-            <NavLink
-              key={item.href}
-              {...item}
-              active={pathname === item.href}
-              onClick={() => setMenuOpen(false)}
-              badge={item.href === '/app/inbox' ? inboxCount : undefined}
-            />
+
+          {HUB_NAV.map((item) => (
+            <div key={item.href}>
+              <NavLink
+                {...item}
+                active={hubActive(pathname ?? '', item.href)}
+                onClick={() => setMenuOpen(false)}
+                badge={item.href === '/app' ? inboxCount : undefined}
+              />
+              {item.href === '/app' && hubActive(pathname ?? '', '/app') && (
+                <>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-1 text-xs text-muted hover:text-foreground"
+                    onClick={() => setCommandOpen((v) => !v)}
+                  >
+                    <ChevronDown className={clsx('w-3 h-3 transition', commandOpen && 'rotate-180')} />
+                    Command pages
+                  </button>
+                  {commandOpen &&
+                    COMMAND_LINKS.map((link) => (
+                      <NavLink
+                        key={link.href}
+                        {...link}
+                        indent
+                        active={pathname === link.href}
+                        onClick={() => setMenuOpen(false)}
+                        badge={link.href === '/app/inbox' ? inboxCount : undefined}
+                      />
+                    ))}
+                </>
+              )}
+            </div>
           ))}
         </aside>
 
@@ -171,7 +184,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-card-border bg-card/95 backdrop-blur md:hidden safe-bottom">
         <div className="grid grid-cols-5">
           {MOBILE_NAV.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href;
+            const active = hubActive(pathname ?? '', href) || pathname === href;
             return (
               <Link
                 key={href}

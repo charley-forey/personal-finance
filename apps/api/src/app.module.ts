@@ -54,6 +54,8 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
 
 import { ProfileModule } from './modules/profile/profile.module';
 
+import { RevolutionModule } from './modules/revolution/revolution.module';
+
 
 
 @Module({
@@ -121,6 +123,8 @@ import { ProfileModule } from './modules/profile/profile.module';
     ComplianceModule,
 
     ProfileModule,
+
+    RevolutionModule,
 
   ],
 

@@ -89,6 +89,19 @@ export const api = {
   generateRecommendations: () => apiFetch<RecommendationItem[]>('/recommendations/generate', { method: 'POST', body: '{}' }),
   recommendationOutcome: (id: string, outcome: string, notes?: string) =>
     apiFetch<unknown>(`/recommendations/${id}/outcome`, { method: 'POST', body: JSON.stringify({ outcome, notes }) }),
+  pageContext: (route: string) =>
+    apiFetch<PageContext>(`/context/page?route=${encodeURIComponent(route)}`),
+  graphNeighbors: (type: string, id: string) =>
+    apiFetch<{ neighbors: GraphNeighbor[] }>(`/graph/entity/${type}/${id}/neighbors`),
+  graphContext: (route: string) => apiFetch<GraphContextResponse>(`/graph/context?route=${encodeURIComponent(route)}`),
+  narrativeSession: () => apiFetch<NarrativeResult>('/narrative/session'),
+  narrativePage: (route: string) =>
+    apiFetch<NarrativeResult>(`/narrative/page?route=${encodeURIComponent(route)}`),
+  explainMetric: (metric: string) =>
+    apiFetch<ExplainResult>(`/narrative/explain?metric=${encodeURIComponent(metric)}`),
+  journeyProgress: () => apiFetch<{ hubs: JourneyHubProgress[] }>('/journey/progress'),
+  completeJourneyStep: (hubId: string, stepId: string) =>
+    apiFetch<unknown>(`/journey/progress/${hubId}/step/${stepId}`, { method: 'POST', body: '{}' }),
   recordSignal: (data: { signalType: string; entityType?: string; entityId?: string; payload?: Record<string, unknown> }) =>
     apiFetch<unknown>('/signals', { method: 'POST', body: JSON.stringify(data) }),
   healthScore: () => apiFetch<HealthScore>('/health-score'),
@@ -541,6 +554,62 @@ export interface GdprExport {
   accounts: unknown[];
   transactions: unknown[];
   auditLogs: AuditLog[];
+}
+
+export interface ContextItem {
+  id: string;
+  title: string;
+  description?: string;
+  deepLink: string;
+  actionLabel?: string;
+  priority: number;
+}
+
+export interface PageContext {
+  route: string;
+  headline: string;
+  priorityItems: ContextItem[];
+  explainers: Array<{ key: string; title: string; body: string }>;
+  relatedPages: Array<{ route: string; label: string; reason: string }>;
+  alerts: Array<{ id: string; severity: string; message: string; deepLink?: string }>;
+  emptyStateGuidance?: string;
+}
+
+export interface GraphNeighbor {
+  node: { type: string; id: string; label: string; route?: string };
+  edge: { linkType: string; weight: number };
+  direction: string;
+}
+
+export interface GraphContextResponse {
+  route: string;
+  focusNodes: Array<{ type: string; id: string; label: string; route?: string }>;
+  suggestedLinks: GraphNeighbor[];
+}
+
+export interface NarrativeResult {
+  content: string;
+  cacheKey: string;
+  links: Array<{ route: string; label: string }>;
+}
+
+export interface ExplainResult {
+  metric: string;
+  title: string;
+  definition: string;
+  yourValue: string;
+  benchmark?: string;
+  whatChanged?: string;
+  suggestedAction?: string;
+}
+
+export interface JourneyHubProgress {
+  hubId: string;
+  label: string;
+  route: string;
+  steps: Array<{ id: string; label: string; route: string; completed: boolean }>;
+  completedCount: number;
+  totalCount: number;
 }
 
 export function formatCurrency(amount: number | string, currency = 'USD') {

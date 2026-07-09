@@ -27,6 +27,8 @@ createWorkers({
     await computeDailySnapshot(db, job.data.orgId);
     await computeBudgetActuals(db, job.data.orgId);
     await processDomainEvents(db);
+    const { computeFeatureStore } = await import('@pf/intelligence');
+    await computeFeatureStore(db, job.data.orgId);
   },
   onInsight: async (job) => {
     console.log(`Generate insights for org ${job.data.orgId}`);

@@ -3,6 +3,7 @@ import { AuthKitShell } from '@/components/authkit-shell';
 import { AuthProvider } from '@/components/auth-provider';
 import { QueryProvider } from '@/components/query-provider';
 import { EventStreamProvider } from '@/components/event-stream-provider';
+import { AppRevolutionWrapper } from '@/components/app-revolution-wrapper';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -10,7 +11,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <QueryProvider>
         <EventStreamProvider>
           <AppShell>
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <AppRevolutionWrapper>{children}</AppRevolutionWrapper>
+            </AuthProvider>
           </AppShell>
         </EventStreamProvider>
       </QueryProvider>

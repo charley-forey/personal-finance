@@ -173,3 +173,36 @@ export const modelEvaluations = pgTable(
   },
   (t) => [index('model_evaluations_agent_idx').on(t.agentType, t.evaluatedAt)],
 );
+
+export const journeyProgress = pgTable(
+  'journey_progress',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    hubId: text('hub_id').notNull(),
+    stepId: text('step_id').notNull(),
+    completed: boolean('completed').default(false).notNull(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    metadataJson: jsonb('metadata_json').$type<Record<string, unknown>>().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex('journey_progress_org_user_hub_step_idx').on(t.orgId, t.userId, t.hubId, t.stepId),
+    index('journey_progress_org_hub_idx').on(t.orgId, t.hubId),
+  ],
+);
+
+export const narrativeCache = pgTable(
+  'narrative_cache',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    cacheKey: text('cache_key').notNull(),
+    content: text('content').notNull(),
+    metadataJson: jsonb('metadata_json').$type<Record<string, unknown>>().default({}),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex('narrative_cache_org_key_idx').on(t.orgId, t.cacheKey)],
+);

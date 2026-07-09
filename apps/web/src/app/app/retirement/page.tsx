@@ -5,7 +5,8 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } f
 import { Landmark } from 'lucide-react';
 import { PageHeader, Card } from '@/components/app-shell';
 import { PageError, PageLoading } from '@/components/page-states';
-import { EmptyState, Skeleton, StatCard } from '@/components/ui';
+import { EmptyState, Skeleton } from '@/components/ui';
+import { StatCardWithExplain } from '@/components/stat-card-with-explain';
 import { api } from '@/lib/api';
 
 export default function RetirementPage() {
@@ -37,8 +38,8 @@ export default function RetirementPage() {
 
       {!loading && !error && result?.result && (
         <div className="grid grid-cols-2 gap-4 mb-8">
-          <StatCard title="Success Rate" value={`${result.result.successRate.toFixed(1)}%`} />
-          <StatCard title="Median Ending Balance" value={`$${(result.result.medianEndingBalance / 1000).toFixed(0)}k`} />
+          <StatCardWithExplain title="Success Rate" value={`${result.result.successRate.toFixed(1)}%`} />
+          <StatCardWithExplain title="Median Ending Balance" value={`$${(result.result.medianEndingBalance / 1000).toFixed(0)}k`} explainMetric="net_worth" />
         </div>
       )}
 

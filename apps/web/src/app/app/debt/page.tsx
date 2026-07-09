@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { PageHeader, Card } from '@/components/app-shell';
-import { Button, Input, Select, StatCard } from '@/components/ui';
+import { Button, Input, Select } from '@/components/ui';
+import { StatCardWithExplain } from '@/components/stat-card-with-explain';
 import { api } from '@/lib/api';
 
 interface Debt {
@@ -74,8 +75,8 @@ export default function DebtPage() {
 
       {result && (
         <div className="grid grid-cols-2 gap-4">
-          <StatCard title="Months to Payoff" value={String(result.months)} />
-          <StatCard title="Total Interest" value={`$${result.totalInterest.toFixed(0)}`} />
+          <StatCardWithExplain title="Months to Payoff" value={String(result.months)} />
+          <StatCardWithExplain title="Total Interest" value={`$${result.totalInterest.toFixed(0)}`} explainMetric="debt_ratio" />
         </div>
       )}
     </div>

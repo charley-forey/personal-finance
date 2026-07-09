@@ -9,6 +9,17 @@ export {
   type RecalibrateCategoriesResult,
   type ScoreForecastAccuracyResult,
 } from './learning-jobs';
+export {
+  computeCategoryConfidence,
+  computeFeatureStore,
+  detectProactiveTriggers,
+  runEvalHarness,
+  PAGE_EVAL_SCENARIOS,
+  type CategoryConfidence,
+  type FeatureStoreSnapshot,
+  type ProactiveTrigger,
+  type EvalScenario,
+} from './revolution';
 
 export interface RankInput {
   title: string;

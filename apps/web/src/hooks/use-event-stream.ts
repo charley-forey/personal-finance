@@ -6,6 +6,8 @@ import { getAuthToken } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
+const INVALIDATE_ALL_CONTEXT: string[][] = [['page-context'], ['graph-context'], ['recommendations'], ['narrative-session']];
+
 const EVENT_QUERY_KEYS: Record<string, string[][]> = {
   'plaid.item.linked': [['plaid-items'], ['accounts']],
   'plaid.sync.completed': [
@@ -18,15 +20,17 @@ const EVENT_QUERY_KEYS: Record<string, string[][]> = {
     ['holdings'],
     ['activity'],
     ['inbox'],
+    ...INVALIDATE_ALL_CONTEXT,
   ],
   'transaction.created': [['transactions'], ['cash-flow'], ['inbox'], ['activity']],
   'transaction.updated': [['transactions'], ['inbox'], ['activity']],
   'balance.changed': [['accounts'], ['net-worth'], ['cash-flow']],
   'budget.exceeded': [['budgets'], ['budget-actuals'], ['insights']],
   'goal.achieved': [['goals'], ['insights']],
-  'insight.generated': [['insights']],
+  'insight.generated': [['insights'], ['page-context'], ['recommendations']],
   'health_score.changed': [['health-score']],
   'pnl.period.closed': [['pnl']],
+  'recommendation.created': [['recommendations'], ['page-context']],
 };
 
 function invalidateForEvent(qc: ReturnType<typeof useQueryClient>, eventType: string) {

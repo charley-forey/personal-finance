@@ -441,3 +441,24 @@ export const featureFlags = pgTable('feature_flags', {
   enabled: boolean('enabled').default(false).notNull(),
   orgOverridesJson: jsonb('org_overrides_json').$type<Record<string, boolean>>(),
 });
+
+export const entityLinks = pgTable(
+  'entity_links',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    sourceType: text('source_type').notNull(),
+    sourceId: text('source_id').notNull(),
+    targetType: text('target_type').notNull(),
+    targetId: text('target_id').notNull(),
+    linkType: text('link_type').notNull(),
+    weight: numeric('weight', { precision: 8, scale: 4 }).default('1'),
+    metadataJson: jsonb('metadata_json').$type<Record<string, unknown>>().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('entity_links_org_source_idx').on(t.orgId, t.sourceType, t.sourceId),
+    index('entity_links_org_target_idx').on(t.orgId, t.targetType, t.targetId),
+    index('entity_links_org_type_idx').on(t.orgId, t.linkType),
+  ],
+);

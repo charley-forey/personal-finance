@@ -171,3 +171,51 @@ export function useCreateGoal() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['goals'] }),
   });
 }
+
+export function usePageContext(route: string) {
+  return useQuery({
+    queryKey: ['page-context', route],
+    queryFn: () => api.pageContext(route),
+    staleTime: 60_000,
+  });
+}
+
+export function useGraphNeighbors(type?: string, id?: string) {
+  return useQuery({
+    queryKey: ['graph', type, id],
+    queryFn: () => api.graphNeighbors(type!, id!),
+    enabled: Boolean(type && id),
+  });
+}
+
+export function useGraphContext(route?: string) {
+  return useQuery({
+    queryKey: ['graph-context', route],
+    queryFn: () => api.graphContext(route!),
+    enabled: Boolean(route),
+    staleTime: 60_000,
+  });
+}
+
+export function useNarrativeSession() {
+  return useQuery({
+    queryKey: ['narrative-session'],
+    queryFn: () => api.narrativeSession(),
+    staleTime: 300_000,
+  });
+}
+
+export function useExplainMetric(metric?: string) {
+  return useQuery({
+    queryKey: ['explain', metric],
+    queryFn: () => api.explainMetric(metric!),
+    enabled: Boolean(metric),
+  });
+}
+
+export function useJourneyProgress() {
+  return useQuery({
+    queryKey: ['journey-progress'],
+    queryFn: () => api.journeyProgress(),
+  });
+}

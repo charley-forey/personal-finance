@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { TrendingUp } from 'lucide-react';
 import { PageHeader, Card } from '@/components/app-shell';
 import { PageError, PageLoading } from '@/components/page-states';
-import { EmptyState, Skeleton, StatCard } from '@/components/ui';
+import { EmptyState, Skeleton } from '@/components/ui';
+import { StatCardWithExplain } from '@/components/stat-card-with-explain';
 import { useFormatCurrency } from '@/hooks/use-currency';
 import { api } from '@/lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -34,12 +35,12 @@ export default function NetWorthPage() {
 
       {!loading && !error && data && (
         <div className="grid grid-cols-1 gap-4 mb-8 sm:grid-cols-3">
-          <StatCard title="Net Worth" value={formatCurrency(data.current.netWorth)} />
+          <StatCardWithExplain title="Net Worth" value={formatCurrency(data.current.netWorth)} />
           {data.current.totalAssets != null && (
-            <StatCard title="Total Assets" value={formatCurrency(data.current.totalAssets)} />
+            <StatCardWithExplain title="Total Assets" value={formatCurrency(data.current.totalAssets)} explainMetric="net_worth" />
           )}
           {data.current.totalLiabilities != null && (
-            <StatCard title="Total Liabilities" value={formatCurrency(data.current.totalLiabilities)} />
+            <StatCardWithExplain title="Total Liabilities" value={formatCurrency(data.current.totalLiabilities)} explainMetric="debt_ratio" />
           )}
         </div>
       )}

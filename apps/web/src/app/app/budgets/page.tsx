@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react';
 import { PiggyBank } from 'lucide-react';
 import { PageHeader, Card } from '@/components/app-shell';
 import { PageLoading } from '@/components/page-states';
-import { Button, EmptyState, Input, Select, StatCard } from '@/components/ui';
+import { Button, EmptyState, Input, Select } from '@/components/ui';
+import { StatCardWithExplain } from '@/components/stat-card-with-explain';
 import { useBudgets, useBudgetActuals, useCategories } from '@/hooks/use-finance';
 import { api, formatCurrency } from '@/lib/api';
 
@@ -61,8 +62,8 @@ export default function BudgetsPage() {
 
       {!isLoading && (budgets?.length ?? 0) > 0 && (
         <div className="mb-6 grid grid-cols-2 gap-4">
-          <StatCard title="Total Budgeted" value={formatCurrency(totals.budgeted)} />
-          <StatCard
+          <StatCardWithExplain title="Total Budgeted" value={formatCurrency(totals.budgeted)} explainMetric="budget_pace" />
+          <StatCardWithExplain
             title="Total Spent"
             value={formatCurrency(totals.spent)}
             change={{

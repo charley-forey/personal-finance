@@ -1,0 +1,10 @@
+{
+  "name": "@pf/twin",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": { "build": "tsc", "typecheck": "tsc --noEmit" },
+  "dependencies": { "@pf/database": "*", "@pf/forecasting": "*", "@pf/shared": "*" },
+  "devDependencies": { "@types/node": "^22.10.2", "typescript": "^5.7.2" }
+}
