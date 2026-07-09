@@ -10,7 +10,6 @@ import {
   ingestKnowledgeBase,
 } from '@pf/sync';
 import { createOpenAIClient, generateEmbedding } from '@pf/ai';
-import { resolve } from 'path';
 import { handleNotificationJob } from './notifications.js';
 
 loadEnv({ path: resolve(process.cwd(), '../.env') });
