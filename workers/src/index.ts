@@ -1,3 +1,5 @@
+import { config as loadEnv } from 'dotenv';
+import { resolve } from 'path';
 import { createWorkers, createPlaidSyncHandler, rollupQueue, insightsQueue, notificationsQueue } from './queues.js';
 import { createDb } from '@pf/database';
 import { organizations } from '@pf/database';
@@ -10,6 +12,8 @@ import {
 import { createOpenAIClient, generateEmbedding } from '@pf/ai';
 import { resolve } from 'path';
 import { handleNotificationJob } from './notifications.js';
+
+loadEnv({ path: resolve(process.cwd(), '../.env') });
 
 const db = createDb(process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5433/personal_finance');
 
