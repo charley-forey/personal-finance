@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { Badge, Button, DataTable, EmptyState, Input, StatCard } from '@/components/ui';
 import { api, formatCurrency, type Scenario } from '@/lib/api';
@@ -63,7 +63,7 @@ export default function ScenariosPage() {
 
   return (
     <div>
-      <PageHeader
+      <AppPageHeader
         title="Scenario Studio"
         description="What-if simulations for income, expenses, and cash flow"
         actions={

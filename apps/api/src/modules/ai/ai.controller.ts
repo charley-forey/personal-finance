@@ -9,7 +9,7 @@ import { AnalyticsService } from '../../services/analytics.services';
 import { KnowledgeService } from '../../services/platform.services';
 import { IntelligenceService } from '../../services/intelligence.service';
 import { DATABASE } from '../../database.module';
-import { AgentChatDto } from '../../dto';
+import { AgentChatDto, InsightFeedbackDto, RecordSignalDto } from '../../dto';
 import { PlanLimitsGuard, RequirePlanLimit } from '../billing/plan-limits.guard';
 
 @ApiTags('ai')
@@ -55,6 +55,12 @@ export class AiController {
     );
   }
 
+  @Get('agents/conversations')
+  async agentConversations(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
+    const auth = getAuth(req);
+    return this.analytics.getAgentConversations(auth.orgId, auth.userId);
+  }
+
   @Get('agents/memories')
   async agentMemories(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
     const auth = getAuth(req);
@@ -92,7 +98,7 @@ export class AiController {
   async insightFeedback(
     @Req() req: { auth?: ReturnType<typeof getAuth> },
     @Param('id') insightId: string,
-    @Body() body: { helpful?: boolean; actedOn?: boolean; dismissed?: boolean; reason?: string },
+    @Body() body: InsightFeedbackDto,
   ) {
     const auth = getAuth(req);
     return this.intelligence.recordInsightFeedback(auth.orgId, auth.userId, {
@@ -126,7 +132,7 @@ export class AiController {
   @Post('signals')
   async recordSignal(
     @Req() req: { auth?: ReturnType<typeof getAuth> },
-    @Body() body: { signalType: string; entityType?: string; entityId?: string; payload?: Record<string, unknown> },
+    @Body() body: RecordSignalDto,
   ) {
     const auth = getAuth(req);
     return this.intelligence.recordUserSignal(auth.orgId, auth.userId, body);

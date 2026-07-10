@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { Badge, Button, EmptyState, Select } from '@/components/ui';
 import { api, formatCurrency, type PnlData } from '@/lib/api';
@@ -102,7 +102,7 @@ export default function PnlPage() {
 
   return (
     <div>
-      <PageHeader
+      <AppPageHeader
         title="Monthly P&L"
         description="Budget vs Actual vs Variance — spreadsheet-style tracker"
         actions={

@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText, Upload } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { Badge, Button, DataTable, EmptyState, Input, Select } from '@/components/ui';
 import { api } from '@/lib/api';
@@ -80,7 +80,7 @@ export default function DocumentsPage() {
 
   return (
     <div>
-      <PageHeader
+      <AppPageHeader
         title="Documents"
         description="Tax docs, statements, and receipts"
         actions={

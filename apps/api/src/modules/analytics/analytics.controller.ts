@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { eq } from 'drizzle-orm';
+import { eq, desc, inArray } from 'drizzle-orm';
 import type { Database } from '@pf/database';
 import {
   transactions,
@@ -26,13 +26,15 @@ import {
   scenarios,
   forecasts,
   budgetActuals,
+  accounts,
+  accountBalances,
 } from '@pf/database';
 import { simulateDebtPayoff, calculateFIRE, eventDrivenCashFlow, portfolioAllocation, runScenario, buildBillCalendar, type CashFlowScheduleItem } from '@pf/analytics';
 import { getCashFlowFromData } from '@pf/sync';
 import { AuthGuard, getAuth, RequireRoles } from '../../common/auth.guard';
 import { AnalyticsService, PnlService, TaxService } from '../../services/analytics.services';
 import { DATABASE } from '../../database.module';
-import { CreateGoalDto } from '../../dto';
+import { CreateBudgetDto, CreateGoalDto } from '../../dto';
 
 @ApiTags('analytics')
 @Controller()
@@ -107,16 +109,16 @@ export class AnalyticsController {
 
   @Post('budgets')
   @RequireRoles('admin')
-  async createBudget(@Req() req: { auth?: ReturnType<typeof getAuth> }, @Body() body: Record<string, unknown>) {
+  async createBudget(@Req() req: { auth?: ReturnType<typeof getAuth> }, @Body() body: CreateBudgetDto) {
     const auth = getAuth(req);
     const [budget] = await this.db
       .insert(budgets)
       .values({
         orgId: auth.orgId,
-        categoryId: body.categoryId as string,
-        periodStart: body.periodStart as string,
-        periodEnd: body.periodEnd as string,
-        amount: (body.amount as number).toString(),
+        categoryId: body.categoryId,
+        periodStart: body.periodStart,
+        periodEnd: body.periodEnd,
+        amount: body.amount.toString(),
       })
       .returning();
     return budget;
@@ -209,7 +211,34 @@ export class AnalyticsController {
   @Get('liabilities')
   async listLiabilities(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
     const auth = getAuth(req);
-    return this.db.select().from(liabilities).where(eq(liabilities.orgId, auth.orgId));
+    const rows = await this.db.select().from(liabilities).where(eq(liabilities.orgId, auth.orgId));
+    if (rows.length === 0) return [];
+
+    const accountIds = [...new Set(rows.map((r) => r.accountId))];
+    const accts = await this.db
+      .select({ id: accounts.id, name: accounts.name })
+      .from(accounts)
+      .where(inArray(accounts.id, accountIds));
+    const acctById = new Map(accts.map((a) => [a.id, a]));
+
+    const balances = await Promise.all(
+      accountIds.map(async (accountId) => {
+        const [bal] = await this.db
+          .select({ current: accountBalances.current })
+          .from(accountBalances)
+          .where(eq(accountBalances.accountId, accountId))
+          .orderBy(desc(accountBalances.capturedAt))
+          .limit(1);
+        return [accountId, bal?.current ?? null] as const;
+      }),
+    );
+    const balById = new Map(balances);
+
+    return rows.map((row) => ({
+      ...row,
+      accountName: acctById.get(row.accountId)?.name ?? row.liabilityType ?? 'Debt',
+      balance: balById.get(row.accountId) ?? null,
+    }));
   }
 
   @Get('recurring')

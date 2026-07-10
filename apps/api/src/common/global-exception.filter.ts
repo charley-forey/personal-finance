@@ -16,7 +16,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const requestId = randomUUID();
+    const request = ctx.getRequest<{ requestId?: string }>();
+    const requestId = request.requestId ?? randomUUID();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let code = 'INTERNAL_ERROR';
@@ -36,8 +37,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
       code = HttpException.name;
     } else if (exception instanceof Error) {
-      message = exception.message;
+      // Never leak internal error details to clients
       this.logger.error({ requestId, err: exception.message, stack: exception.stack });
+      message = 'An unexpected error occurred';
+    } else {
+      this.logger.error({ requestId, err: String(exception) });
     }
 
     response.status(status).json({

@@ -66,10 +66,34 @@ describe('intelligence', () => {
     assert.ok(['control', 'treatment'].includes(c));
   });
 
-  it('exposes learning job stubs', async () => {
-    const recal = await recalibrateCategories('org-1');
-    const forecast = await scoreForecastAccuracy('org-1');
-    assert.equal(recal.status, 'stub');
-    assert.equal(forecast.status, 'stub');
+  it('recalibrates categories from correction history', async () => {
+    const empty = await recalibrateCategories('org-1');
+    assert.equal(empty.status, 'empty');
+    assert.equal(empty.recalibrated, 0);
+
+    const recal = await recalibrateCategories('org-1', [
+      { merchantName: 'Starbucks', newCategoryId: 'coffee', priorCategoryId: 'food' },
+      { merchantName: 'Starbucks', newCategoryId: 'coffee', priorCategoryId: 'food' },
+      { merchantName: 'Uber', newCategoryId: 'transport' },
+    ]);
+    assert.equal(recal.status, 'completed');
+    assert.equal(recal.recalibrated, 3);
+    assert.equal(recal.rulesSuggested, 2);
+    assert.equal(recal.merchantCoverage, 2);
+  });
+
+  it('scores forecast accuracy with MAPE', async () => {
+    const empty = await scoreForecastAccuracy('org-1');
+    assert.equal(empty.status, 'empty');
+    assert.equal(empty.mapePct, null);
+
+    const forecast = await scoreForecastAccuracy('org-1', [
+      { predicted: 100, actual: 100 },
+      { predicted: 110, actual: 100 },
+    ]);
+    assert.equal(forecast.status, 'completed');
+    assert.equal(forecast.scored, 2);
+    assert.equal(forecast.mapePct, 5);
+    assert.equal(forecast.withinGate, true);
   });
 });

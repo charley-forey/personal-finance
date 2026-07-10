@@ -2,6 +2,7 @@
 
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { completeJourneyStepSafe } from '@/lib/journey';
 
 export function useAccounts() {
   return useQuery({ queryKey: ['accounts'], queryFn: () => api.accounts() });
@@ -102,6 +103,40 @@ export function usePortfolioAllocation() {
   return useQuery({ queryKey: ['portfolio-allocation'], queryFn: () => api.portfolioAllocation() });
 }
 
+export function useBillCalendar() {
+  return useQuery({ queryKey: ['bill-calendar'], queryFn: () => api.billCalendar() });
+}
+
+export function useFire() {
+  return useQuery({ queryKey: ['fire'], queryFn: () => api.fire() });
+}
+
+export function useTaxEstimate(year?: number) {
+  return useQuery({
+    queryKey: ['tax-estimate', year],
+    queryFn: () => api.taxEstimate(year),
+  });
+}
+
+export function useDocuments() {
+  return useQuery({ queryKey: ['documents'], queryFn: () => api.documents() });
+}
+
+export function useRules() {
+  return useQuery({ queryKey: ['rules'], queryFn: () => api.rules() });
+}
+
+export function usePnl(year: number, month: number) {
+  return useQuery({
+    queryKey: ['pnl', year, month],
+    queryFn: () => api.pnl(year, month),
+  });
+}
+
+export function useManualAssets() {
+  return useQuery({ queryKey: ['manual-assets'], queryFn: () => api.manualAssets() });
+}
+
 export function useBillingPlan() {
   return useQuery({ queryKey: ['billing-plan'], queryFn: () => api.billingPlan() });
 }
@@ -120,6 +155,8 @@ export function useInvalidateFinance() {
     qc.invalidateQueries({ queryKey: ['recurring'] });
     qc.invalidateQueries({ queryKey: ['liabilities'] });
     qc.invalidateQueries({ queryKey: ['activity'] });
+    qc.invalidateQueries({ queryKey: ['journey-progress'] });
+    qc.invalidateQueries({ queryKey: ['preferences'] });
   };
 }
 
@@ -167,8 +204,15 @@ export function useMarkNotificationRead() {
 export function useCreateGoal() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Parameters<typeof api.createGoal>[0]) => api.createGoal(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals'] }),
+    mutationFn: async (data: Parameters<typeof api.createGoal>[0]) => {
+      const goal = await api.createGoal(data);
+      await completeJourneyStepSafe('plan', 'first-goal');
+      return goal;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['goals'] });
+      qc.invalidateQueries({ queryKey: ['journey-progress'] });
+    },
   });
 }
 

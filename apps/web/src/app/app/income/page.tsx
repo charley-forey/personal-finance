@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { Wallet } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { EmptyState, StatCard } from '@/components/ui';
 import { useTransactions } from '@/hooks/use-finance';
@@ -29,7 +29,7 @@ export default function IncomePage() {
 
   return (
     <div>
-      <PageHeader title="Income" description="Income sources and YTD trends" />
+      <AppPageHeader title="Income" description="Income sources and YTD trends" />
 
       {error && <PageError message={error.message} />}
       {isLoading && <PageLoading variant="stats" count={2} className="mb-6" />}

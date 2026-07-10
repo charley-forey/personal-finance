@@ -1,7 +1,7 @@
 'use client';
 
 import { CreditCard } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { EmptyState, StatCard } from '@/components/ui';
 import { useLiabilities } from '@/hooks/use-finance';
@@ -24,7 +24,7 @@ export default function CreditPage() {
 
   return (
     <div>
-      <PageHeader title="Credit & Debt" description="Credit cards, loans, and payment schedules" />
+      <AppPageHeader title="Credit & Debt" description="Credit cards, loans, and payment schedules" />
 
       {error && <PageError message={error.message} />}
       {isLoading && <PageLoading variant="cards" count={2} className="mb-6" />}

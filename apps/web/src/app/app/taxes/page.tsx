@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageError } from '@/components/page-states';
 import { Badge, Button, EmptyState, Input, Select, Skeleton, StatCard } from '@/components/ui';
 import { api } from '@/lib/api';
@@ -81,7 +81,7 @@ export default function TaxesPage() {
 
   return (
     <div>
-      <PageHeader
+      <AppPageHeader
         title="Tax Center"
         description="YTD estimates and quarterly payments"
         actions={

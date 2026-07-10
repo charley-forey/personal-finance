@@ -32,6 +32,8 @@ export class PlaidController {
 
   @Post('plaid/link/token')
   @RequireRoles('admin')
+  @UseGuards(PlanLimitsGuard)
+  @RequirePlanLimit('banks')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async linkToken(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
     const auth = getAuth(req);

@@ -42,10 +42,10 @@ export function EntityGraphPanel({ entityType, entityId, route, className }: Ent
         {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </Button>
       {open && (
-        <div className="mt-2 space-y-2 rounded-lg border border-border/60 p-3">
+        <div className="mt-2 space-y-2 rounded-lg border border-card-border/60 p-3">
           {(loadingNeighbors || loadingCtx) && <Skeleton className="h-16 w-full" />}
           {!loadingNeighbors && !loadingCtx && links.length === 0 && (
-            <p className="text-xs text-muted-foreground">No linked entities yet.</p>
+            <p className="text-xs text-muted">No linked entities yet.</p>
           )}
           {links.map((link, i) => (
             <div key={`${link.node.id}-${i}`} className="flex items-center justify-between gap-2 text-sm">

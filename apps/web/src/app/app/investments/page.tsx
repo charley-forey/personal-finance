@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { PieChart as PieChartIcon } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageLoading } from '@/components/page-states';
 import { Badge, DataTable, EmptyState, Skeleton, StatCard } from '@/components/ui';
 import { useHoldings } from '@/hooks/use-finance';
@@ -31,7 +31,7 @@ export default function InvestmentsPage() {
 
   return (
     <div>
-      <PageHeader title="Investments" description="Portfolio holdings and allocation vs 60/25/15 target" />
+      <AppPageHeader title="Investments" description="Portfolio holdings and allocation vs 60/25/15 target" />
 
       <div className="grid gap-6 lg:grid-cols-2 mb-6">
         {isLoading ? (

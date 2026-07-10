@@ -8,7 +8,7 @@
     "start": "node dist/main.js",
     "start:prod": "node dist/main.js",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test --test-force-exit test/integration.test.ts"
+    "test": "node --import tsx --test --test-force-exit test/integration.test.ts test/tenant-isolation.test.ts test/env.validation.test.ts"
   },
   "dependencies": {
     "@nestjs/bullmq": "^10.2.3",

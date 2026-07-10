@@ -1,15 +1,22 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, SetMetadata, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, SetMetadata, Inject, forwardRef, Optional } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { jwtVerify, createRemoteJWKSet } from 'jose';
 import type { AuthContext, MemberRole } from '@pf/shared';
 import { AuthService } from '../services/core.services';
+import { ApiKeyService } from '../services/platform.services';
 import { isDevelopment } from './env.util';
 
 export const ROLES_KEY = 'roles';
 export const RequireRoles = (...roles: MemberRole[]) => SetMetadata(ROLES_KEY, roles);
 
 export const Public = () => SetMetadata('isPublic', true);
+
+function roleFromApiKeyScopes(scopes: string[]): MemberRole {
+  if (scopes.includes('admin')) return 'owner';
+  if (scopes.includes('write')) return 'admin';
+  return 'viewer';
+}
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -20,6 +27,9 @@ export class AuthGuard implements CanActivate {
     private reflector: Reflector,
     @Inject(forwardRef(() => AuthService))
     private authService: AuthService,
+    @Optional()
+    @Inject(forwardRef(() => ApiKeyService))
+    private apiKeys?: ApiKeyService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -30,14 +40,44 @@ export class AuthGuard implements CanActivate {
     if (isPublic) return true;
 
     const request = context.switchToHttp().getRequest();
-    const authHeader = request.headers.authorization;
-    const queryToken = request.query?.token as string | undefined;
+    const authHeader = request.headers.authorization as string | undefined;
+    const apiKeyHeader = (request.headers['x-api-key'] as string | undefined)?.trim();
 
-    if (!authHeader?.startsWith('Bearer ') && !queryToken) {
+    // API key via X-Api-Key or Bearer pf_...
+    const rawApiKey =
+      apiKeyHeader?.startsWith('pf_')
+        ? apiKeyHeader
+        : authHeader?.startsWith('Bearer pf_')
+          ? authHeader.slice(7)
+          : null;
+
+    if (rawApiKey) {
+      if (!this.apiKeys) {
+        throw new UnauthorizedException('API key auth is not available');
+      }
+      const validated = await this.apiKeys.validate(rawApiKey);
+      if (!validated) {
+        throw new UnauthorizedException('Invalid API key');
+      }
+      request.auth = {
+        userId: `api-key:${validated.keyId}`,
+        workosUserId: `api-key:${validated.keyId}`,
+        email: `api-key+${validated.keyId}@system.local`,
+        orgId: validated.orgId,
+        role: roleFromApiKeyScopes(validated.scopes),
+      } satisfies AuthContext;
+      request.apiKeyScopes = validated.scopes;
+      return true;
+    }
+
+    // Query-string tokens (?token=) are intentionally not accepted — they leak via
+    // logs, Referer, and browser history. Clients (including SSE) must send
+    // Authorization: Bearer <token>. Use fetch-based SSE; EventSource cannot set headers.
+    if (!authHeader?.startsWith('Bearer ')) {
       throw new UnauthorizedException('Missing authorization token');
     }
 
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : queryToken!;
+    const token = authHeader.slice(7);
 
     if (token.startsWith('dev:')) {
       if (!isDevelopment()) {

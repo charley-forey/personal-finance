@@ -1,7 +1,7 @@
 'use client';
 
 import { Repeat } from 'lucide-react';
-import { PageHeader } from '@/components/app-shell';
+import { AppPageHeader } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { Badge, DataTable, EmptyState, StatCard } from '@/components/ui';
 import type { DataTableColumn } from '@/components/ui';
@@ -52,7 +52,7 @@ export default function SubscriptionsPage() {
 
   return (
     <div>
-      <PageHeader
+      <AppPageHeader
         title="Subscriptions"
         description="Recurring income and expenses detected from your accounts"
       />

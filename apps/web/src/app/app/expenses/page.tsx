@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { Receipt } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { EmptyState, StatCard } from '@/components/ui';
 import { useTransactions } from '@/hooks/use-finance';
@@ -29,7 +29,7 @@ export default function ExpensesPage() {
 
   return (
     <div>
-      <PageHeader title="Expenses" description="Spending breakdown and trends" />
+      <AppPageHeader title="Expenses" description="Spending breakdown and trends" />
 
       {error && <PageError message={error.message} />}
       {isLoading && <PageLoading variant="stats" count={2} className="mb-6" />}

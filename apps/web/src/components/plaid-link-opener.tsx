@@ -3,14 +3,16 @@
 import { useCallback } from 'react';
 import { usePlaidLink } from 'react-plaid-link';
 import { api } from '@/lib/api';
+import { completeJourneyStepSafe } from '@/lib/journey';
 import { useInvalidateFinance } from '@/hooks/use-finance';
 
 interface PlaidLinkOpenerProps {
   linkToken: string;
   onStatus: (status: string) => void;
+  onLinked?: () => void;
 }
 
-export function PlaidLinkOpener({ linkToken, onStatus }: PlaidLinkOpenerProps) {
+export function PlaidLinkOpener({ linkToken, onStatus, onLinked }: PlaidLinkOpenerProps) {
   const invalidate = useInvalidateFinance();
 
   const onSuccess = useCallback(
@@ -19,13 +21,16 @@ export function PlaidLinkOpener({ linkToken, onStatus }: PlaidLinkOpenerProps) {
       try {
         await api.exchangeToken(publicToken);
         onStatus('Account linked! Syncing data...');
+        await completeJourneyStepSafe('command', 'link-account');
+        await completeJourneyStepSafe('cash-flow', 'link-account');
         invalidate();
+        onLinked?.();
         setTimeout(() => invalidate(), 3000);
       } catch {
         onStatus('Failed to exchange token');
       }
     },
-    [onStatus, invalidate],
+    [onStatus, invalidate, onLinked],
   );
 
   const { open, ready } = usePlaidLink({ token: linkToken, onSuccess });

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Pencil, Trash2 } from 'lucide-react';
-import { PageHeader } from '@/components/app-shell';
+import { AppPageHeader } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { Button, DataTable, EmptyState, Input, Modal, Select, StatCard } from '@/components/ui';
 import { api, type ManualAsset } from '@/lib/api';
@@ -85,7 +85,7 @@ export default function AssetsPage() {
 
   return (
     <div>
-      <PageHeader
+      <AppPageHeader
         title="Manual Assets"
         description="Real estate, crypto, vehicles, and other holdings not linked via Plaid"
         actions={

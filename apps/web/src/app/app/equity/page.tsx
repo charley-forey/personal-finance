@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Briefcase } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageLoading } from '@/components/page-states';
 import { Button, EmptyState, Input, Select, StatCard } from '@/components/ui';
 import { api, formatCurrency } from '@/lib/api';
@@ -37,7 +37,7 @@ export default function EquityPage() {
 
   return (
     <div>
-      <PageHeader
+      <AppPageHeader
         title="Equity Compensation"
         description="RSUs, options, and vesting schedules"
         actions={

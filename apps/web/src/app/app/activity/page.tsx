@@ -1,7 +1,7 @@
 'use client';
 
 import { Activity } from 'lucide-react';
-import { PageHeader } from '@/components/app-shell';
+import { AppPageHeader } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { Badge, DataTable, EmptyState, StatCard } from '@/components/ui';
 import type { DataTableColumn } from '@/components/ui';
@@ -46,7 +46,7 @@ export default function ActivityPage() {
 
   return (
     <div>
-      <PageHeader
+      <AppPageHeader
         title="Activity"
         description="Recent changes across your financial data"
       />

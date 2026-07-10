@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BookOpen, Search } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageLoading } from '@/components/page-states';
 import { Button, EmptyState, Input } from '@/components/ui';
 import { api } from '@/lib/api';
@@ -57,7 +57,7 @@ export default function LearnPage() {
 
   return (
     <div>
-      <PageHeader title="Learn" description="Knowledge base with personalized financial guidance" />
+      <AppPageHeader title="Learn" description="Knowledge base with personalized financial guidance" />
 
       <div className="mb-8 max-w-xl">
         <div className="relative">

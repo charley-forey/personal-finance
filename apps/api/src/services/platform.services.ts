@@ -379,16 +379,37 @@ export class ComplianceService {
 
   getSsoConfig(orgId: string) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+    const workosReady = Boolean(process.env.WORKOS_CLIENT_ID && process.env.WORKOS_API_KEY);
+    // Honest stub: user JWT auth via WorkOS AuthKit is live; org-level SAML/OIDC SSO is not.
+    // TODO(WP-031): wire WorkOS Organization SSO (connections + domain verification) per org.
     return {
       orgId,
       enabled: false,
+      status: 'not_configured' as const,
       provider: 'workos',
-      ssoConfigured: Boolean(process.env.WORKOS_CLIENT_ID),
+      ssoConfigured: false,
+      workosAuthConfigured: workosReady,
       scimEnabled: false,
       metadataUrl: null,
       entityId: null,
       acsUrl: `${appUrl}/api/auth/sso/callback`,
       domains: [],
+      message:
+        'Enterprise SSO/SAML is not configured. WorkOS user auth may be available; org SSO requires WP-031 setup.',
+    };
+  }
+
+  getAdvisorPortalStatus() {
+    return {
+      status: 'stub' as const,
+      message:
+        'Advisor portal firm/client routes exist for scaffolding only — not a production advisor product surface.',
+      features: {
+        firmCrud: true,
+        clientLinking: true,
+        sharedDashboards: false,
+        delegatedAccess: false,
+      },
     };
   }
 

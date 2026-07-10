@@ -35,4 +35,16 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+function withOptionalSentry(cfg: NextConfig): NextConfig {
+  const sentryDsn = process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN;
+  if (!sentryDsn) return cfg;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { withSentryConfig } = require('@sentry/nextjs') as typeof import('@sentry/nextjs');
+    return withSentryConfig(cfg, { silent: true });
+  } catch {
+    return cfg;
+  }
+}
+
+export default withOptionalSentry(nextConfig);

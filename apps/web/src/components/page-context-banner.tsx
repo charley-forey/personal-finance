@@ -40,7 +40,7 @@ export function PageContextBanner() {
         </div>
       )}
       {data.relatedPages.length > 0 && (
-        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+        <div className="flex flex-wrap gap-3 text-xs text-muted">
           {data.relatedPages.slice(0, 3).map((p) => (
             <Link key={p.route} href={p.route} className="hover:text-primary" title={p.reason}>
               {p.label} →

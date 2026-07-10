@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { Badge, DataTable, EmptyState, StatCard } from '@/components/ui';
 import { api, formatCurrency, type BillEvent } from '@/lib/api';
@@ -23,7 +23,7 @@ export default function CalendarPage() {
 
   return (
     <div>
-      <PageHeader
+      <AppPageHeader
         title="Bill Calendar"
         description="Recurring bills and debt payments over the next 30 days"
       />

@@ -5,3 +5,8 @@ export { AgentChatDto } from './agent-chat.dto';
 export { CheckoutDto } from './checkout.dto';
 export { CreateGoalDto } from './create-goal.dto';
 export { UpdateProfileDto } from './update-profile.dto';
+export { CreateBudgetDto } from './create-budget.dto';
+export { CreateRuleDto, UpdateRuleDto } from './create-rule.dto';
+export { InsightFeedbackDto } from './insight-feedback.dto';
+export { RecordSignalDto } from './record-signal.dto';
+export { UpdatePreferencesDto } from './update-preferences.dto';

@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useCallback, useState } from 'react';
 import { api } from '@/lib/api';
+import { PlanLimitGate } from '@/components/plan-limit-gate';
 
 const PlaidLinkOpener = dynamic(
   () => import('./plaid-link-opener').then((m) => m.PlaidLinkOpener),
@@ -16,7 +17,11 @@ const PlaidLinkOpener = dynamic(
   },
 );
 
-export function PlaidLinkButton() {
+interface PlaidLinkButtonProps {
+  onLinked?: () => void;
+}
+
+function PlaidLinkButtonInner({ onLinked }: PlaidLinkButtonProps) {
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
@@ -46,9 +51,17 @@ export function PlaidLinkButton() {
           {loading ? 'Preparing...' : 'Prepare Bank Link'}
         </button>
       ) : (
-        <PlaidLinkOpener linkToken={linkToken} onStatus={setStatus} />
+        <PlaidLinkOpener linkToken={linkToken} onStatus={setStatus} onLinked={onLinked} />
       )}
       {status && <p className="text-sm text-muted">{status}</p>}
     </div>
+  );
+}
+
+export function PlaidLinkButton({ onLinked }: PlaidLinkButtonProps) {
+  return (
+    <PlanLimitGate limitKey="banks">
+      <PlaidLinkButtonInner onLinked={onLinked} />
+    </PlanLimitGate>
   );
 }

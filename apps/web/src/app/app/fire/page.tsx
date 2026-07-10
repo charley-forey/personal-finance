@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageError } from '@/components/page-states';
-import { Skeleton, StatCard } from '@/components/ui';
+import { ProvenanceChip, Skeleton } from '@/components/ui';
+import { StatCardWithExplain } from '@/components/stat-card-with-explain';
 import { api } from '@/lib/api';
 import { calculateFIRE, generateFireProjection } from '@/lib/fire';
 import { formatCurrency } from '@/lib/format';
@@ -97,7 +98,7 @@ export default function FirePage() {
 
   return (
     <div>
-      <PageHeader
+      <AppPageHeader
         title="FIRE Calculator"
         description="Financial Independence / Retire Early — adjust assumptions to see your path"
       />
@@ -147,10 +148,34 @@ export default function FirePage() {
 
         <div className="space-y-6 lg:col-span-2">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <StatCard title="FIRE Number" value={formatCurrency(result.fireNumber)} />
-            <StatCard title="Years to FI" value={result.yearsToFI.toFixed(1)} />
-            <StatCard title="Progress" value={`${result.progress.toFixed(1)}%`} />
-            <StatCard title="Coast FI" value={formatCurrency(result.coastFI)} />
+            <StatCardWithExplain
+              title="FIRE Number"
+              value={formatCurrency(result.fireNumber)}
+              provenance={
+                <ProvenanceChip source="FIRE model" detail="25× expenses" methodologyHref="/app/library" />
+              }
+            />
+            <StatCardWithExplain
+              title="Years to FI"
+              value={result.yearsToFI.toFixed(1)}
+              provenance={
+                <ProvenanceChip source="FIRE model" detail="Savings path" methodologyHref="/app/library" />
+              }
+            />
+            <StatCardWithExplain
+              title="Progress"
+              value={`${result.progress.toFixed(1)}%`}
+              provenance={
+                <ProvenanceChip source="FIRE model" detail="NW ÷ FIRE number" methodologyHref="/app/library" />
+              }
+            />
+            <StatCardWithExplain
+              title="Coast FI"
+              value={formatCurrency(result.coastFI)}
+              provenance={
+                <ProvenanceChip source="FIRE model" detail="Coast FI" methodologyHref="/app/library" />
+              }
+            />
           </div>
 
           <Card title="Path to Financial Independence">

@@ -5,10 +5,12 @@
   --foreground: #fafafa;
   --card: #18181b;
   --card-border: #27272a;
+  --border: #27272a;
   --primary: #22c55e;
   --primary-muted: #166534;
   --accent: #3b82f6;
   --muted: #71717a;
+  --muted-foreground: #71717a;
   --danger: #ef4444;
 }
 
@@ -17,12 +19,26 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-border: var(--card-border);
+  --color-border: var(--border);
   --color-primary: var(--primary);
+  --color-primary-muted: var(--primary-muted);
   --color-accent: var(--accent);
   --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
   --color-danger: var(--danger);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 body {
@@ -38,4 +54,38 @@ body {
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Privacy blur — toggled via Settings (`pf_privacy_blur`) on documentElement */
+html.pf-privacy-blur .tabular-nums,
+html.pf-privacy-blur [data-sensitive] {
+  filter: blur(6px);
+  user-select: none;
+}
+
+.sr-only:focus,
+.sr-only:focus-visible {
+  position: fixed;
+  left: 1rem;
+  top: 1rem;
+  z-index: 70;
+  width: auto;
+  height: auto;
+  padding: 0.5rem 1rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
 }

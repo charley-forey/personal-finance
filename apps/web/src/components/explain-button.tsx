@@ -25,20 +25,20 @@ export function ExplainButton({ metric, label = 'Why?', className }: ExplainButt
         {isLoading && <Skeleton className="h-24 w-full" />}
         {data && (
           <div className="space-y-3 text-sm">
-            <p className="text-muted-foreground">{data.definition}</p>
+            <p className="text-muted">{data.definition}</p>
             <div>
-              <p className="font-medium text-xs uppercase text-muted-foreground">Your value</p>
+              <p className="font-medium text-xs uppercase text-muted">Your value</p>
               <p className="text-lg font-semibold">{data.yourValue}</p>
             </div>
             {data.benchmark && (
               <div>
-                <p className="font-medium text-xs uppercase text-muted-foreground">Benchmark</p>
+                <p className="font-medium text-xs uppercase text-muted">Benchmark</p>
                 <p>{data.benchmark}</p>
               </div>
             )}
             {data.suggestedAction && (
               <div className="rounded-md bg-primary/5 p-3">
-                <p className="font-medium text-xs uppercase text-muted-foreground">Suggested action</p>
+                <p className="font-medium text-xs uppercase text-muted">Suggested action</p>
                 <p>{data.suggestedAction}</p>
               </div>
             )}

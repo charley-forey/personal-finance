@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertTriangle } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { Badge, EmptyState } from '@/components/ui';
 import { PlaidLinkButton } from '@/components/plaid-link-button';
@@ -60,7 +60,7 @@ export default function AccountsPage() {
 
   return (
     <div>
-      <PageHeader title="Accounts" description="Linked institutions and balances" actions={<PlaidLinkButton />} />
+      <AppPageHeader title="Accounts" description="Linked institutions and balances" actions={<PlaidLinkButton />} />
 
       {reauthItems.length > 0 && (
         <Card className="mb-6 border-amber-500/40 bg-amber-500/5">

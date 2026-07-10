@@ -25,6 +25,7 @@ import { AuthGuard, RolesGuard } from './common/auth.guard';
 import { GlobalExceptionFilter } from './common/global-exception.filter';
 
 import { AuditMiddleware } from './common/audit.middleware';
+import { RequestIdMiddleware } from './common/request-id.middleware';
 
 
 
@@ -131,6 +132,7 @@ import { RevolutionModule } from './modules/revolution/revolution.module';
   providers: [
 
     AuditMiddleware,
+    RequestIdMiddleware,
 
     { provide: APP_GUARD, useExisting: AuthGuard },
 
@@ -147,9 +149,9 @@ import { RevolutionModule } from './modules/revolution/revolution.module';
 export class AppModule implements NestModule {
 
   configure(consumer: MiddlewareConsumer) {
-
-    consumer.apply(AuditMiddleware).forRoutes({ path: '*', method: RequestMethod.ALL });
-
+    consumer
+      .apply(RequestIdMiddleware, AuditMiddleware)
+      .forRoutes({ path: '*', method: RequestMethod.ALL });
   }
 
 }

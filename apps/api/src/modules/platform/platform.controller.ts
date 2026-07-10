@@ -48,6 +48,7 @@ import { CategoryService } from '../../services/category.service';
 import { AnalyticsService } from '../../services/analytics.services';
 import { StorageService } from '../../services/storage.service';
 import { DATABASE } from '../../database.module';
+import { CreateRuleDto, UpdatePreferencesDto, UpdateRuleDto } from '../../dto';
 
 @ApiTags('platform')
 @Controller()
@@ -154,6 +155,8 @@ export class PlatformController {
   }
 
   @Post('documents/upload-url')
+  @UseGuards(PlanLimitsGuard)
+  @RequirePlanLimit('documents')
   async documentUploadUrl(
     @Req() req: { auth?: ReturnType<typeof getAuth> },
     @Body() body: { filename: string; contentType?: string },
@@ -240,17 +243,17 @@ export class PlatformController {
 
   @Post('rules')
   @RequireRoles('admin')
-  async createRule(@Req() req: { auth?: ReturnType<typeof getAuth> }, @Body() body: Record<string, unknown>) {
+  async createRule(@Req() req: { auth?: ReturnType<typeof getAuth> }, @Body() body: CreateRuleDto) {
     const auth = getAuth(req);
     const [rule] = await this.db
       .insert(automationRules)
       .values({
         orgId: auth.orgId,
-        name: body.name as string,
-        triggerType: body.triggerType as string,
-        actionType: body.actionType as string,
-        triggerConditionsJson: body.conditions as Record<string, unknown>,
-        actionConfigJson: body.action as Record<string, unknown>,
+        name: body.name,
+        triggerType: body.triggerType,
+        actionType: body.actionType,
+        triggerConditionsJson: body.conditions,
+        actionConfigJson: body.action,
         enabled: body.enabled !== false,
       })
       .returning();
@@ -262,18 +265,18 @@ export class PlatformController {
   async updateRule(
     @Req() req: { auth?: ReturnType<typeof getAuth> },
     @Param('id') id: string,
-    @Body() body: Record<string, unknown>,
+    @Body() body: UpdateRuleDto,
   ) {
     const auth = getAuth(req);
     const [rule] = await this.db
       .update(automationRules)
       .set({
-        name: body.name as string | undefined,
-        triggerType: body.triggerType as string | undefined,
-        actionType: body.actionType as string | undefined,
-        triggerConditionsJson: body.conditions as Record<string, unknown> | undefined,
-        actionConfigJson: body.action as Record<string, unknown> | undefined,
-        enabled: body.enabled as boolean | undefined,
+        name: body.name,
+        triggerType: body.triggerType,
+        actionType: body.actionType,
+        triggerConditionsJson: body.conditions,
+        actionConfigJson: body.action,
+        enabled: body.enabled,
       })
       .where(and(eq(automationRules.id, id), eq(automationRules.orgId, auth.orgId)))
       .returning();
@@ -398,35 +401,55 @@ export class PlatformController {
   async getPreferences(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
     const auth = getAuth(req);
     const [prefs] = await this.db.select().from(userPreferences).where(eq(userPreferences.userId, auth.userId)).limit(1);
-    return prefs ?? { currency: 'USD', timezone: 'America/New_York', notificationSettingsJson: {} };
+    const base = prefs ?? { currency: 'USD', timezone: 'America/New_York', notificationSettingsJson: {} as Record<string, unknown> };
+    const notif = (base.notificationSettingsJson ?? {}) as Record<string, unknown>;
+    return {
+      ...base,
+      onboardingCompleted: Boolean(notif.onboardingCompleted),
+    };
   }
 
   @Put('preferences')
-  async updatePreferences(@Req() req: { auth?: ReturnType<typeof getAuth> }, @Body() body: Record<string, unknown>) {
+  async updatePreferences(@Req() req: { auth?: ReturnType<typeof getAuth> }, @Body() body: UpdatePreferencesDto) {
     const auth = getAuth(req);
     const [existing] = await this.db.select().from(userPreferences).where(eq(userPreferences.userId, auth.userId)).limit(1);
+    const existingNotif = (existing?.notificationSettingsJson ?? {}) as Record<string, unknown>;
+    const shouldMergeNotif =
+      body.notificationSettingsJson !== undefined || body.onboardingCompleted !== undefined;
+    const notificationSettingsJson = shouldMergeNotif
+      ? {
+          ...existingNotif,
+          ...(body.notificationSettingsJson ?? {}),
+          ...(body.onboardingCompleted !== undefined
+            ? { onboardingCompleted: body.onboardingCompleted }
+            : {}),
+        }
+      : existing?.notificationSettingsJson;
+
     if (existing) {
       const [updated] = await this.db
         .update(userPreferences)
         .set({
-          currency: (body.currency as string) ?? existing.currency,
-          timezone: (body.timezone as string) ?? existing.timezone,
-          notificationSettingsJson: (body.notificationSettingsJson as Record<string, unknown>) ?? existing.notificationSettingsJson,
+          currency: body.currency ?? existing.currency,
+          timezone: body.timezone ?? existing.timezone,
+          notificationSettingsJson: notificationSettingsJson ?? existing.notificationSettingsJson,
         })
         .where(eq(userPreferences.userId, auth.userId))
         .returning();
-      return updated;
+      const notif = (updated.notificationSettingsJson ?? {}) as Record<string, unknown>;
+      return { ...updated, onboardingCompleted: Boolean(notif.onboardingCompleted) };
     }
     const [created] = await this.db
       .insert(userPreferences)
       .values({
         userId: auth.userId,
-        currency: (body.currency as string) ?? 'USD',
-        timezone: (body.timezone as string) ?? 'America/New_York',
-        notificationSettingsJson: body.notificationSettingsJson as Record<string, unknown>,
+        currency: body.currency ?? 'USD',
+        timezone: body.timezone ?? 'America/New_York',
+        notificationSettingsJson: notificationSettingsJson ?? {},
       })
       .returning();
-    return created;
+    const notif = (created.notificationSettingsJson ?? {}) as Record<string, unknown>;
+    return { ...created, onboardingCompleted: Boolean(notif.onboardingCompleted) };
   }
 
   @Get('entities')
@@ -467,19 +490,31 @@ export class PlatformController {
     return this.db.select().from(taxLots).where(eq(taxLots.orgId, getAuth(req).orgId));
   }
 
+  @Get('advisor/status')
+  async advisorStatus() {
+    return this.compliance.getAdvisorPortalStatus();
+  }
+
   @Post('advisor/firms')
   async createAdvisorFirm(@Body() body: { name: string }) {
-    return this.advisor.createFirm(body.name);
+    const firm = await this.advisor.createFirm(body.name);
+    return { status: 'stub' as const, message: 'Advisor firm created in stub mode', firm };
   }
 
   @Post('advisor/clients')
   async linkAdvisorClient(@Body() body: { firmId: string; orgId: string; advisorUserId?: string }) {
-    return this.advisor.linkClient(body.firmId, body.orgId, body.advisorUserId);
+    const client = await this.advisor.linkClient(body.firmId, body.orgId, body.advisorUserId);
+    return { status: 'stub' as const, message: 'Advisor client link created in stub mode', client };
   }
 
   @Get('advisor/firms/:firmId/clients')
   async listAdvisorClients(@Param('firmId') firmId: string) {
-    return this.advisor.listClients(firmId);
+    const clients = await this.advisor.listClients(firmId);
+    return {
+      status: 'stub' as const,
+      message: 'Advisor client list is a scaffolding stub',
+      clients,
+    };
   }
 
   @Get('households')

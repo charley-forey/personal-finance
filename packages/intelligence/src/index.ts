@@ -6,6 +6,8 @@ export { assignExperimentVariant, type ExperimentVariant } from './experiments';
 export {
   recalibrateCategories,
   scoreForecastAccuracy,
+  type CategoryCorrectionInput,
+  type ForecastObservation,
   type RecalibrateCategoriesResult,
   type ScoreForecastAccuracyResult,
 } from './learning-jobs';
@@ -20,6 +22,11 @@ export {
   type ProactiveTrigger,
   type EvalScenario,
 } from './revolution';
+export {
+  assertCoreGatesHealthy,
+  evalHarnessSmoke,
+  QUALITY_GATE_FILE,
+} from './quality-gates';
 
 export interface RankInput {
   title: string;

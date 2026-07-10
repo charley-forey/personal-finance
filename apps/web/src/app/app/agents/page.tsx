@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { useEffect, useId, useRef, useState } from 'react';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageLoading } from '@/components/page-states';
 import { Button } from '@/components/ui';
 import { api, type AgentConversation } from '@/lib/api';
-import { Bot, MessageSquare, Plus, Sparkles } from 'lucide-react';
+import { useBillingPlan } from '@/hooks/use-finance';
+import { Bot, MessageSquare, Plus, Sparkles, X } from 'lucide-react';
+import clsx from 'clsx';
 
 const AGENTS = [
   {
@@ -74,15 +76,68 @@ function conversationPreview(conv: AgentConversation) {
   return first?.content?.slice(0, 60) ?? 'New conversation';
 }
 
+function ConversationList({
+  conversations,
+  conversationId,
+  loading,
+  onNew,
+  onSelect,
+}: {
+  conversations: AgentConversation[];
+  conversationId?: string;
+  loading: boolean;
+  onNew: () => void;
+  onSelect: (conv: AgentConversation) => void;
+}) {
+  return (
+    <>
+      <Button className="w-full mb-4" size="sm" onClick={onNew}>
+        <Plus className="w-4 h-4" /> New chat
+      </Button>
+      {loading ? (
+        <PageLoading variant="list" count={3} />
+      ) : (
+        <div className="space-y-1">
+          {conversations.map((conv) => (
+            <Button
+              key={conv.id}
+              variant={conversationId === conv.id ? 'secondary' : 'ghost'}
+              size="sm"
+              className={clsx(
+                'w-full justify-start truncate',
+                conversationId === conv.id && 'border border-primary/30 bg-primary/20',
+              )}
+              onClick={() => onSelect(conv)}
+            >
+              <span className="text-xs text-muted block capitalize w-full text-left">
+                {conv.agentType.replace(/_/g, ' ')}
+              </span>
+              <span className="truncate w-full text-left">{conversationPreview(conv)}</span>
+            </Button>
+          ))}
+          {conversations.length === 0 && (
+            <p className="text-xs text-muted px-3">No conversations yet</p>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function AgentsPage() {
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; toolCalls?: unknown[] }>>([]);
   const [agentType, setAgentType] = useState('general_cfo');
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [conversations, setConversations] = useState<AgentConversation[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingConversations, setLoadingConversations] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const sheetTitleId = useId();
+  const { data: billing } = useBillingPlan();
+  const aiUsed = billing?.usage.aiMessagesThisMonth ?? 0;
+  const aiLimit = billing?.aiMessagesLimit;
 
   useEffect(() => {
     api
@@ -92,10 +147,27 @@ export default function AgentsPage() {
       .finally(() => setLoadingConversations(false));
   }, []);
 
+  useEffect(() => {
+    if (!historyOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setHistoryOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.body.style.overflow = 'hidden';
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    sheetRef.current?.querySelector<HTMLElement>('button')?.focus();
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = '';
+      previouslyFocused?.focus?.();
+    };
+  }, [historyOpen]);
+
   function startNewChat() {
     setConversationId(undefined);
     setMessages([]);
     setMessage('');
+    setHistoryOpen(false);
   }
 
   function loadConversation(conv: AgentConversation) {
@@ -106,6 +178,7 @@ export default function AgentsPage() {
         .filter((m) => m.role === 'user' || m.role === 'assistant')
         .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
     );
+    setHistoryOpen(false);
   }
 
   async function send(text?: string) {
@@ -117,7 +190,10 @@ export default function AgentsPage() {
     try {
       const res = await api.agentChat(agentType, msg, conversationId);
       setConversationId(res.conversationId);
-      setMessages((prev) => [...prev, { role: 'assistant', content: res.response }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: res.response, toolCalls: res.toolCalls },
+      ]);
       const updated = await api.agentConversations();
       setConversations(updated);
     } catch (e) {
@@ -134,41 +210,18 @@ export default function AgentsPage() {
 
   return (
     <div>
-      <PageHeader title="AI Agents" description="Domain-expert agents with access to your financial data" />
+      <AppPageHeader title="AI Agents" description="Domain-expert agents with access to your financial data" />
 
       <div className="flex gap-6">
-        {sidebarOpen && (
-          <aside className="w-64 shrink-0 hidden md:block">
-            <Button className="w-full mb-4" size="sm" onClick={startNewChat}>
-              <Plus className="w-4 h-4" /> New chat
-            </Button>
-            {loadingConversations ? (
-              <PageLoading variant="list" count={3} />
-            ) : (
-              <div className="space-y-1">
-                {conversations.map((conv) => (
-                  <Button
-                    key={conv.id}
-                    variant={conversationId === conv.id ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className={`w-full justify-start truncate ${
-                      conversationId === conv.id ? 'border border-primary/30 bg-primary/20' : ''
-                    }`}
-                    onClick={() => loadConversation(conv)}
-                  >
-                    <span className="text-xs text-muted block capitalize w-full text-left">
-                      {conv.agentType.replace(/_/g, ' ')}
-                    </span>
-                    <span className="truncate w-full text-left">{conversationPreview(conv)}</span>
-                  </Button>
-                ))}
-                {conversations.length === 0 && (
-                  <p className="text-xs text-muted px-3">No conversations yet</p>
-                )}
-              </div>
-            )}
-          </aside>
-        )}
+        <aside className="w-64 shrink-0 hidden md:block">
+          <ConversationList
+            conversations={conversations}
+            conversationId={conversationId}
+            loading={loadingConversations}
+            onNew={startNewChat}
+            onSelect={loadConversation}
+          />
+        </aside>
 
         <div className="flex-1 min-w-0">
           <div className="flex gap-2 mb-4 flex-wrap">
@@ -189,13 +242,23 @@ export default function AgentsPage() {
               variant="secondary"
               size="sm"
               className="md:hidden"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-expanded={historyOpen}
+              aria-controls="agents-history-sheet"
+              onClick={() => setHistoryOpen(true)}
             >
               History
             </Button>
           </div>
 
           <p className="text-sm text-muted mb-4">{selectedAgent.description}</p>
+
+          <p className="text-xs text-muted mb-4 rounded-lg border border-card-border bg-background/60 px-3 py-2">
+            Agents may call tools against your linked data. LLM usage counts toward your plan limits
+            {aiLimit != null
+              ? ` (${aiUsed}/${aiLimit} AI messages this month)`
+              : ' (unlimited on your current plan)'}
+            . Upgrade in Settings if you hit a cap.
+          </p>
 
           <Card>
             {messages.length > 0 && (
@@ -210,6 +273,11 @@ export default function AgentsPage() {
                     }`}
                   >
                     <span className="text-xs text-muted block mb-1 capitalize">{m.role}</span>
+                    {m.role === 'assistant' && Array.isArray(m.toolCalls) && m.toolCalls.length > 0 ? (
+                      <p className="text-xs text-muted mb-2">
+                        Used {m.toolCalls.length} tool{m.toolCalls.length === 1 ? '' : 's'} against your linked data
+                      </p>
+                    ) : null}
                     <p className="whitespace-pre-wrap">{m.content}</p>
                   </div>
                 ))}
@@ -258,6 +326,45 @@ export default function AgentsPage() {
           </Card>
         </div>
       </div>
+
+      {historyOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setHistoryOpen(false)}
+            aria-hidden
+          />
+          <div
+            id="agents-history-sheet"
+            ref={sheetRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={sheetTitleId}
+            className="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-2xl border border-card-border bg-card p-4 safe-bottom"
+          >
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 id={sheetTitleId} className="text-base font-semibold">
+                Conversation history
+              </h2>
+              <button
+                type="button"
+                aria-label="Close history"
+                onClick={() => setHistoryOpen(false)}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-white/5"
+              >
+                <X className="h-5 w-5" aria-hidden />
+              </button>
+            </div>
+            <ConversationList
+              conversations={conversations}
+              conversationId={conversationId}
+              loading={loadingConversations}
+              onNew={startNewChat}
+              onSelect={loadConversation}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

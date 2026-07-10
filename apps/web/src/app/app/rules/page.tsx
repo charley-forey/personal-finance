@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { Badge, Button, DataTable, EmptyState, Input, Select } from '@/components/ui';
 import { api, type AutomationRule } from '@/lib/api';
+import { completeJourneyStepSafe } from '@/lib/journey';
 import { Bot } from 'lucide-react';
 
 const TRIGGER_TYPES = [
@@ -48,8 +49,10 @@ export default function RulesPage() {
           body: form.actionBody || `Rule "${form.name}" triggered`,
         },
       }),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await completeJourneyStepSafe('plan', 'first-rule');
       qc.invalidateQueries({ queryKey: ['rules'] });
+      qc.invalidateQueries({ queryKey: ['journey-progress'] });
       setForm({ name: '', triggerType: 'transaction', actionType: 'notify', minAmount: '', actionTitle: '', actionBody: '' });
       setShowForm(false);
     },
@@ -67,7 +70,7 @@ export default function RulesPage() {
 
   return (
     <div>
-      <PageHeader
+      <AppPageHeader
         title="Automation Rules"
         description="Build rules that trigger notifications and insights"
         actions={

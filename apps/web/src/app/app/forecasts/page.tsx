@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { TrendingUp } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { EmptyState, Skeleton, StatCard } from '@/components/ui';
 import { useFormatCurrency } from '@/hooks/use-currency';
@@ -34,7 +34,7 @@ export default function ForecastsPage() {
 
   return (
     <div>
-      <PageHeader title="Forecasts" description="Cash flow projections" />
+      <AppPageHeader title="Forecasts" description="Cash flow projections" />
 
       {error && <PageError message={error} />}
 

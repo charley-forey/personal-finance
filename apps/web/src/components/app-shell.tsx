@@ -18,41 +18,51 @@ import {
   Shield,
   Settings,
   ChevronDown,
+  Bell,
+  MoreHorizontal,
+  type LucideIcon,
 } from 'lucide-react';
-import { useState } from 'react';
+import { Suspense, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useInbox } from '@/hooks/use-finance';
 import { Badge } from '@/components/ui';
+import { CommandPalette, openCommandPalette } from '@/components/command-palette';
+import { SyncHealthBanner } from '@/components/sync-health-banner';
+import { PwaInstallPrompt } from '@/components/pwa-install-prompt';
+import { DemoModeBanner } from '@/components/demo-mode-banner';
+import { GuidedTour } from '@/components/guided-tour';
+import { TimeRangeProvider, TimeRangeSelect } from '@/components/time-range-provider';
+import {
+  COMMAND_LINKS,
+  HUB_NAV,
+  MOBILE_NAV,
+  MORE_SECTIONS,
+  getHubForPath,
+  hubActive,
+  type NavIconName,
+} from '@/lib/nav-config';
 
-const HUB_NAV = [
-  { href: '/app', label: 'Command', icon: LayoutDashboard },
-  { href: '/app/cash-flow', label: 'Cash Flow', icon: Wallet },
-  { href: '/app/plan', label: 'Plan', icon: PieChart },
-  { href: '/app/wealth', label: 'Wealth', icon: TrendingUp },
-  { href: '/app/future', label: 'Future', icon: Target },
-  { href: '/app/library', label: 'Library', icon: FileText },
-];
+const ICONS: Record<NavIconName, LucideIcon> = {
+  LayoutDashboard,
+  Wallet,
+  PieChart,
+  TrendingUp,
+  Target,
+  FileText,
+  Inbox,
+  Bot,
+  Shield,
+  Settings,
+  Bell,
+  Menu,
+  MoreHorizontal,
+};
 
-const COMMAND_LINKS = [
-  { href: '/app/inbox', label: 'Inbox', icon: Inbox },
-  { href: '/app/insights', label: 'Insights', icon: TrendingUp },
-  { href: '/app/agents', label: 'Agents', icon: Bot },
-  { href: '/app/health', label: 'Health', icon: Shield },
-  { href: '/app/notifications', label: 'Notifications', icon: Inbox },
-  { href: '/app/settings', label: 'Settings', icon: Settings },
-];
-
-const MOBILE_NAV = [
-  { href: '/app', label: 'Home', icon: LayoutDashboard },
-  { href: '/app/cash-flow', label: 'Cash Flow', icon: Wallet },
-  { href: '/app/plan', label: 'Plan', icon: PieChart },
-  { href: '/app/future', label: 'Future', icon: Target },
-  { href: '/app/settings', label: 'Settings', icon: Settings },
-];
+const PRIVACY_KEY = 'pf_privacy_blur';
 
 function NavLink({
   href,
   label,
-  icon: Icon,
+  icon,
   active,
   onClick,
   badge,
@@ -60,24 +70,26 @@ function NavLink({
 }: {
   href: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: NavIconName;
   active: boolean;
   onClick?: () => void;
   badge?: number;
   indent?: boolean;
 }) {
+  const Icon = ICONS[icon];
   return (
     <Link
       href={href}
       prefetch
       onClick={onClick}
+      aria-current={active ? 'page' : undefined}
       className={clsx(
-        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors min-h-11',
         indent && 'pl-9',
         active ? 'bg-primary/10 text-primary' : 'text-muted hover:text-foreground hover:bg-white/5',
       )}
     >
-      <Icon className="w-4 h-4 shrink-0" />
+      <Icon className="w-4 h-4 shrink-0" aria-hidden />
       <span className="truncate flex-1">{label}</span>
       {badge !== undefined && badge > 0 && (
         <Badge variant="warning" className="ml-auto shrink-0">
@@ -88,151 +100,301 @@ function NavLink({
   );
 }
 
-function hubActive(pathname: string, href: string) {
-  if (href === '/app') return pathname === '/app' || COMMAND_LINKS.some((l) => l.href === pathname);
-  if (href === '/app/cash-flow')
-    return pathname === href || pathname.startsWith('/app/accounts') || pathname.startsWith('/app/transactions') || pathname === '/app/subscriptions' || pathname === '/app/income' || pathname === '/app/expenses' || pathname === '/app/activity' || pathname === '/app/calendar';
-  if (href === '/app/plan')
-    return pathname === href || pathname.startsWith('/app/budgets') || pathname.startsWith('/app/pnl') || pathname.startsWith('/app/goals') || pathname.startsWith('/app/rules');
-  if (href === '/app/wealth')
-    return pathname === href || pathname.startsWith('/app/net-worth') || pathname.startsWith('/app/investments') || pathname.startsWith('/app/assets') || pathname.startsWith('/app/equity') || pathname.startsWith('/app/forecasts');
-  if (href === '/app/future')
-    return pathname === href || pathname.startsWith('/app/retirement') || pathname.startsWith('/app/fire') || pathname.startsWith('/app/debt') || pathname.startsWith('/app/credit') || pathname.startsWith('/app/taxes') || pathname.startsWith('/app/life-plans') || pathname.startsWith('/app/scenarios');
-  if (href === '/app/library')
-    return pathname === href || pathname.startsWith('/app/learn') || pathname.startsWith('/app/documents') || pathname.startsWith('/app/onboarding') || pathname.startsWith('/app/settings');
-  return pathname === href;
+function useFocusTrap(active: boolean, containerRef: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    if (!active) return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    const focusable = () =>
+      Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => !el.hasAttribute('disabled') && el.tabIndex !== -1);
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const items = focusable();
+    items[0]?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const list = focusable();
+      if (list.length === 0) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    container.addEventListener('keydown', onKeyDown);
+    return () => {
+      container.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, [active, containerRef]);
+}
+
+function applyPrivacyBlur(enabled: boolean) {
+  document.documentElement.classList.toggle('pf-privacy-blur', enabled);
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
   const [menuOpen, setMenuOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(true);
+  const drawerRef = useRef<HTMLElement>(null);
+  const drawerTitleId = useId();
   const { data: inbox } = useInbox();
   const inboxCount = (inbox?.uncategorized.length ?? 0) + (inbox?.anomalies.length ?? 0);
+  const hub = getHubForPath(pathname);
+
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const openMenu = useCallback(() => setMenuOpen(true), []);
+
+  useFocusTrap(menuOpen, drawerRef);
+
+  useEffect(() => {
+    try {
+      applyPrivacyBlur(localStorage.getItem(PRIVACY_KEY) === '1');
+    } catch {
+      /* ignore */
+    }
+    const onPrivacy = () => {
+      try {
+        applyPrivacyBlur(localStorage.getItem(PRIVACY_KEY) === '1');
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener('pf:privacy-blur-change', onPrivacy);
+    return () => window.removeEventListener('pf:privacy-blur-change', onPrivacy);
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeMenu();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [menuOpen, closeMenu]);
+
+  // Close drawer on route change
+  useEffect(() => {
+    closeMenu();
+  }, [pathname, closeMenu]);
+
+  function renderHubNav(onNavigate?: () => void) {
+    return HUB_NAV.map((item) => (
+      <div key={item.href}>
+        <NavLink
+          {...item}
+          active={hubActive(pathname, item.href)}
+          onClick={onNavigate}
+          badge={item.href === '/app' ? inboxCount : undefined}
+        />
+        {item.href === '/app' && hubActive(pathname, '/app') && (
+          <>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted hover:text-foreground min-h-11"
+              onClick={() => setCommandOpen((v) => !v)}
+              aria-expanded={commandOpen}
+            >
+              <ChevronDown className={clsx('w-3 h-3 transition', commandOpen && 'rotate-180')} aria-hidden />
+              Command pages
+            </button>
+            {commandOpen &&
+              COMMAND_LINKS.map((link) => (
+                <NavLink
+                  key={link.href}
+                  {...link}
+                  indent
+                  active={pathname === link.href}
+                  onClick={onNavigate}
+                  badge={link.href === '/app/inbox' ? inboxCount : undefined}
+                />
+              ))}
+          </>
+        )}
+      </div>
+    ));
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-card-border bg-card/95 backdrop-blur px-4 py-3 md:hidden">
-        <Link href="/app" className="flex items-center gap-2 font-semibold">
-          <Home className="w-5 h-5 text-primary" />
-          Finance OS
-        </Link>
-        <button
-          type="button"
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-          onClick={() => setMenuOpen((v) => !v)}
-          className="p-2 rounded-lg hover:bg-white/5"
-        >
-          {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
-      </header>
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <TimeRangeProvider>
+        <div className="min-h-screen bg-background">
+          <a href="#main-content" className="sr-only rounded-lg bg-card text-sm shadow-lg">
+            Skip to main content
+          </a>
 
-      {menuOpen && (
-        <div className="fixed inset-0 z-30 bg-black/50 md:hidden" onClick={() => setMenuOpen(false)} aria-hidden />
-      )}
+          <header className="sticky top-0 z-40 flex items-center justify-between border-b border-card-border bg-card/95 backdrop-blur px-4 py-3 md:hidden">
+            <Link href="/app" className="flex items-center gap-2 font-semibold min-h-11">
+              <Home className="w-5 h-5 text-primary" aria-hidden />
+              Finance OS
+            </Link>
+            <button
+              type="button"
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-nav-drawer"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="p-2 rounded-lg hover:bg-white/5 min-h-11 min-w-11 inline-flex items-center justify-center"
+            >
+              {menuOpen ? <X className="w-5 h-5" aria-hidden /> : <Menu className="w-5 h-5" aria-hidden />}
+            </button>
+          </header>
 
-      <div className="flex min-h-[calc(100vh-3.5rem)] md:min-h-screen">
-        <aside
-          className={clsx(
-            'fixed md:sticky top-14 md:top-0 z-30 h-[calc(100vh-3.5rem)] md:h-screen w-72 border-r border-card-border bg-card p-4 flex flex-col gap-1 overflow-y-auto transition-transform md:translate-x-0',
-            menuOpen ? 'translate-x-0' : '-translate-x-full',
+          {menuOpen && (
+            <div
+              className="fixed inset-0 z-30 bg-black/50 md:hidden"
+              onClick={closeMenu}
+              aria-hidden
+            />
           )}
-        >
-          <Link href="/" className="hidden md:flex items-center gap-2 px-3 py-4 mb-2">
-            <Home className="w-5 h-5 text-primary" />
-            <span className="font-semibold text-lg">Finance OS</span>
-          </Link>
 
-          {HUB_NAV.map((item) => (
-            <div key={item.href}>
-              <NavLink
-                {...item}
-                active={hubActive(pathname ?? '', item.href)}
-                onClick={() => setMenuOpen(false)}
-                badge={item.href === '/app' ? inboxCount : undefined}
-              />
-              {item.href === '/app' && hubActive(pathname ?? '', '/app') && (
-                <>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2 px-3 py-1 text-xs text-muted hover:text-foreground"
-                    onClick={() => setCommandOpen((v) => !v)}
-                  >
-                    <ChevronDown className={clsx('w-3 h-3 transition', commandOpen && 'rotate-180')} />
-                    Command pages
-                  </button>
-                  {commandOpen &&
-                    COMMAND_LINKS.map((link) => (
-                      <NavLink
-                        key={link.href}
-                        {...link}
-                        indent
-                        active={pathname === link.href}
-                        onClick={() => setMenuOpen(false)}
-                        badge={link.href === '/app/inbox' ? inboxCount : undefined}
-                      />
-                    ))}
-                </>
-              )}
-            </div>
-          ))}
-        </aside>
-
-        <main className="flex-1 p-4 sm:p-6 md:p-8 pb-24 md:pb-8 overflow-x-hidden">{children}</main>
-      </div>
-
-      <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-card-border bg-card/95 backdrop-blur md:hidden safe-bottom">
-        <div className="grid grid-cols-5">
-          {MOBILE_NAV.map(({ href, label, icon: Icon }) => {
-            const active = hubActive(pathname ?? '', href) || pathname === href;
-            return (
-              <Link
-                key={href}
-                href={href}
-                prefetch
-                className={clsx(
-                  'flex flex-col items-center justify-center gap-1 py-2 text-[10px] sm:text-xs',
-                  active ? 'text-primary' : 'text-muted',
-                )}
-              >
-                <Icon className="w-5 h-5" />
-                <span>{label}</span>
+          <div className="flex min-h-[calc(100vh-3.5rem)] md:min-h-screen">
+            {/* Desktop sidebar */}
+            <aside className="hidden md:sticky md:top-0 md:flex md:h-screen md:w-72 md:flex-col md:gap-1 md:overflow-y-auto md:border-r md:border-card-border md:bg-card md:p-4">
+              <Link href="/" className="flex items-center gap-2 px-3 py-4 mb-2">
+                <Home className="w-5 h-5 text-primary" aria-hidden />
+                <span className="font-semibold text-lg">Finance OS</span>
               </Link>
-            );
-          })}
+              <nav aria-label="Primary" className="flex-1">
+                {renderHubNav()}
+              </nav>
+              <div className="mt-auto border-t border-card-border pt-3">
+                <button
+                  type="button"
+                  onClick={() => openCommandPalette()}
+                  className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm text-muted hover:bg-white/5 hover:text-foreground min-h-11"
+                >
+                  <span>Search</span>
+                  <kbd className="rounded border border-card-border px-1.5 py-0.5 text-[10px]">⌘K</kbd>
+                </button>
+              </div>
+            </aside>
+
+            {/* Mobile drawer */}
+            <aside
+              id="mobile-nav-drawer"
+              ref={drawerRef}
+              role="dialog"
+              aria-modal={menuOpen || undefined}
+              aria-hidden={!menuOpen}
+              aria-labelledby={drawerTitleId}
+              className={clsx(
+                'fixed top-14 z-30 flex h-[calc(100vh-3.5rem)] w-72 flex-col gap-1 overflow-y-auto border-r border-card-border bg-card p-4 transition-transform md:hidden',
+                menuOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none',
+              )}
+            >
+              <h2 id={drawerTitleId} className="sr-only">
+                Navigation menu
+              </h2>
+              <nav aria-label="Primary">{renderHubNav(closeMenu)}</nav>
+              <div className="mt-4 border-t border-card-border pt-4 space-y-4">
+                {MORE_SECTIONS.map((section) => (
+                  <div key={section.title}>
+                    <p className="px-3 mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+                      {section.title}
+                    </p>
+                    <nav aria-label={section.title}>
+                      {section.links.map((link) => (
+                        <NavLink
+                          key={`more-${section.title}-${link.href}`}
+                          {...link}
+                          active={pathname === link.href || hubActive(pathname, link.href)}
+                          onClick={closeMenu}
+                          badge={link.href === '/app/inbox' ? inboxCount : undefined}
+                        />
+                      ))}
+                    </nav>
+                  </div>
+                ))}
+              </div>
+            </aside>
+
+            <main id="main-content" className="flex-1 p-4 sm:p-6 md:p-8 pb-24 md:pb-8 overflow-x-hidden">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                {hub && (
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-muted">
+                    {hub.label}
+                  </span>
+                )}
+                <TimeRangeSelect className="ml-auto" />
+              </div>
+              <DemoModeBanner />
+              <SyncHealthBanner />
+              {children}
+            </main>
+          </div>
+
+          <nav aria-label="Mobile" className="fixed bottom-0 inset-x-0 z-40 border-t border-card-border bg-card/95 backdrop-blur md:hidden safe-bottom">
+            <div className="grid grid-cols-5">
+              {MOBILE_NAV.map((item) => {
+                const Icon = ICONS[item.icon];
+                const active = item.opensMore
+                  ? menuOpen
+                  : hubActive(pathname, item.href) || pathname === item.href;
+
+                if (item.opensMore) {
+                  return (
+                    <button
+                      key={item.href}
+                      type="button"
+                      aria-label="More"
+                      aria-expanded={menuOpen}
+                      aria-controls="mobile-nav-drawer"
+                      onClick={() => (menuOpen ? closeMenu() : openMenu())}
+                      className={clsx(
+                        'flex flex-col items-center justify-center gap-1 min-h-11 py-2 text-xs',
+                        active ? 'text-primary' : 'text-muted',
+                      )}
+                    >
+                      <Icon className="w-5 h-5" aria-hidden />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                }
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    prefetch
+                    aria-current={active ? 'page' : undefined}
+                    className={clsx(
+                      'flex flex-col items-center justify-center gap-1 min-h-11 py-2 text-xs',
+                      active ? 'text-primary' : 'text-muted',
+                    )}
+                  >
+                    <Icon className="w-5 h-5" aria-hidden />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
+
+          <CommandPalette />
+          <GuidedTour />
+          <PwaInstallPrompt />
         </div>
-      </nav>
-    </div>
+      </TimeRangeProvider>
+    </Suspense>
   );
 }
 
-export function Card({ title, children, className }: { title?: string; children: React.ReactNode; className?: string }) {
-  return (
-    <div className={clsx('rounded-xl border border-card-border bg-card p-4 sm:p-6', className)}>
-      {title && <h3 className="text-sm font-medium text-muted mb-4">{title}</h3>}
-      {children}
-    </div>
-  );
-}
-
-export function StatCard({ label, value, change }: { label: string; value: string; change?: string }) {
-  return (
-    <Card>
-      <p className="text-xs sm:text-sm text-muted">{label}</p>
-      <p className="text-xl sm:text-2xl font-semibold tabular-nums mt-1">{value}</p>
-      {change && <p className="text-xs text-primary mt-1">{change}</p>}
-    </Card>
-  );
-}
-
-export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: React.ReactNode }) {
-  return (
-    <div className="mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">{title}</h1>
-        {description && <p className="text-muted mt-1 sm:mt-2 text-sm sm:text-base">{description}</p>}
-      </div>
-      {actions && <div className="shrink-0">{actions}</div>}
-    </div>
-  );
-}
+/** @deprecated Prefer `@/components/ui` — re-exported for existing page imports. */
+export { Card, PageHeader } from '@/components/ui';

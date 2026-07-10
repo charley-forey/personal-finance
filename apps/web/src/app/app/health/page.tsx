@@ -1,8 +1,9 @@
 'use client';
 
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card, ProvenanceChip } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { StatCard } from '@/components/ui';
+import { StatCardWithExplain } from '@/components/stat-card-with-explain';
 import { useHealthScore } from '@/hooks/use-finance';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -14,7 +15,7 @@ export default function HealthPage() {
   if (isLoading) {
     return (
       <div>
-        <PageHeader title="Financial Health" description="Composite score with improvement actions" />
+        <AppPageHeader title="Financial Health" description="Composite score with improvement actions" />
         <PageLoading variant="stats" count={1} className="mb-6" />
         <PageLoading variant="cards" count={4} />
       </div>
@@ -24,19 +25,41 @@ export default function HealthPage() {
   if (error || !h) {
     return (
       <div>
-        <PageHeader title="Financial Health" description="Composite score with improvement actions" />
+        <AppPageHeader title="Financial Health" description="Composite score with improvement actions" />
         <PageError message={error?.message ?? 'Unable to load health score.'} />
       </div>
     );
   }
 
+  const provenance = (
+    <ProvenanceChip
+      source="Health model"
+      detail="Composite score"
+      syncedAt={history?.[0]?.computedAt}
+      methodologyHref="/app/library"
+    />
+  );
+
   return (
     <div>
-      <PageHeader title="Financial Health" description="Composite score with improvement actions" />
-      <StatCard title="Overall Score" value={`${h.overall}/100`} className="max-w-xs" />
+      <AppPageHeader title="Financial Health" description="Composite score with improvement actions" />
+      <StatCardWithExplain
+        title="Overall Score"
+        value={`${h.overall}/100`}
+        className="max-w-xs"
+        explainMetric="health_score"
+        provenance={provenance}
+      />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
         {Object.entries(h.subScores).map(([k, v]) => (
-          <StatCard key={k} title={k.replace(/_/g, ' ')} value={Math.round(v)} />
+          <StatCard
+            key={k}
+            title={k.replace(/_/g, ' ')}
+            value={Math.round(v)}
+            provenance={
+              <ProvenanceChip source="Health model" detail={k.replace(/_/g, ' ')} />
+            }
+          />
         ))}
       </div>
       <Card title="Improvement Actions" className="mt-6">

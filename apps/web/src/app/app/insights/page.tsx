@@ -2,11 +2,16 @@
 
 import { useState } from 'react';
 import { Lightbulb, ThumbsDown, ThumbsUp, X } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card, Badge } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { Button, EmptyState } from '@/components/ui';
 import { useInsights, useGenerateInsight } from '@/hooks/use-finance';
 import { api } from '@/lib/api';
+
+function isSampleInsight(insight: { title?: string; body?: string; insightType?: string }): boolean {
+  const blob = `${insight.title ?? ''} ${insight.body ?? ''} ${insight.insightType ?? ''}`.toLowerCase();
+  return blob.includes('welcome') || blob.includes('sample') || blob.includes('demo');
+}
 
 export default function InsightsPage() {
   const { data: insights, isLoading, error, refetch } = useInsights();
@@ -34,7 +39,7 @@ export default function InsightsPage() {
 
   return (
     <div>
-      <PageHeader
+      <AppPageHeader
         title="Insights"
         description="AI-generated financial insights"
         actions={
@@ -54,7 +59,10 @@ export default function InsightsPage() {
       <div className="space-y-4">
         {visible.map((i) => (
           <Card key={i.id}>
-            <span className="text-xs text-primary uppercase">{i.insightType}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-primary uppercase">{i.insightType}</span>
+              {isSampleInsight(i) && <Badge variant="warning">Sample</Badge>}
+            </div>
             <p className="font-medium mt-1">{i.title}</p>
             <p className="text-sm text-muted mt-2">{i.body}</p>
             <div className="mt-4 flex flex-wrap gap-2">

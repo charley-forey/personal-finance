@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Target } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageLoading } from '@/components/page-states';
 import { Button, EmptyState, Input, Select } from '@/components/ui';
 import { useGoals, useCreateGoal } from '@/hooks/use-finance';
@@ -16,7 +16,7 @@ export default function GoalsPage() {
 
   return (
     <div>
-      <PageHeader
+      <AppPageHeader
         title="Goals"
         description="Track progress toward financial milestones"
         actions={

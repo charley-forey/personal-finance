@@ -13,7 +13,6 @@ import {
   VerificationService,
   AdvisorService,
   HouseholdService,
-  ApiKeyService,
   ComplianceService,
 } from '../../services/platform.services';
 import { PlatformAdminGuard } from '../../common/platform-admin.guard';
@@ -32,12 +31,11 @@ import { StorageService } from '../../services/storage.service';
     VerificationService,
     AdvisorService,
     HouseholdService,
-    ApiKeyService,
     ComplianceService,
     CategoryService,
     PlatformAdminGuard,
     StorageService,
   ],
-  exports: [ComplianceService, ApiKeyService],
+  exports: [ComplianceService],
 })
 export class PlatformModule {}

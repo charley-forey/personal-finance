@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Map } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageLoading } from '@/components/page-states';
 import { Button, EmptyState, Input, Select } from '@/components/ui';
 import { api } from '@/lib/api';
@@ -27,7 +27,7 @@ export default function LifePlansPage() {
 
   return (
     <div>
-      <PageHeader
+      <AppPageHeader
         title="Life Plans"
         description="Home, college, wedding, and major life goals"
         actions={

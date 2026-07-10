@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, CheckCheck } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
 import { Badge, Button, EmptyState } from '@/components/ui';
 import { api, type Notification } from '@/lib/api';
@@ -106,7 +106,7 @@ export default function NotificationsPage() {
 
   return (
     <div>
-      <PageHeader
+      <AppPageHeader
         title="Notifications"
         description="Alerts and reminders"
         actions={

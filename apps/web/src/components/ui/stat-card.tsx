@@ -8,6 +8,8 @@ export interface StatCardProps {
     value: string;
     trend?: 'up' | 'down' | 'neutral';
   };
+  /** Optional trust/provenance footer (e.g. ProvenanceChip). */
+  provenance?: ReactNode;
   className?: string;
 }
 
@@ -17,7 +19,7 @@ const trendStyles = {
   neutral: 'text-muted',
 } as const;
 
-export function StatCard({ title, value, change, className }: StatCardProps) {
+export function StatCard({ title, value, change, provenance, className }: StatCardProps) {
   return (
     <div
       className={clsx(
@@ -32,6 +34,7 @@ export function StatCard({ title, value, change, className }: StatCardProps) {
           {change.value}
         </p>
       )}
+      {provenance ? <div className="mt-3 pt-2 border-t border-card-border/60">{provenance}</div> : null}
     </div>
   );
 }

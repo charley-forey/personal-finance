@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { TrendingUp } from 'lucide-react';
-import { PageHeader, Card } from '@/components/app-shell';
+import { AppPageHeader, Card, ProvenanceChip } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
+import { PageContextBanner } from '@/components/page-context-banner';
 import { EmptyState, Skeleton } from '@/components/ui';
 import { StatCardWithExplain } from '@/components/stat-card-with-explain';
 import { useFormatCurrency } from '@/hooks/use-currency';
@@ -25,22 +26,46 @@ export default function NetWorthPage() {
   }, []);
 
   const chartData = data?.history.map((h) => ({ date: h.snapshotDate, value: parseFloat(h.netWorth) })) ?? [];
+  const lastSnapshot = data?.history?.[data.history.length - 1]?.snapshotDate;
+  const provenance = (
+    <ProvenanceChip
+      source="Linked accounts"
+      detail="Assets − liabilities"
+      syncedAt={lastSnapshot}
+      href="/app/accounts"
+      methodologyHref="/app/library"
+    />
+  );
 
   return (
     <div>
-      <PageHeader title="Net Worth" description="Assets minus liabilities over time" />
+      <AppPageHeader title="Net Worth" description="Assets minus liabilities over time" />
+
+      <div className="mb-4">
+        <PageContextBanner />
+      </div>
 
       {error && <PageError message={error} />}
       {loading && <PageLoading variant="chart" className="mb-6" />}
 
       {!loading && !error && data && (
         <div className="grid grid-cols-1 gap-4 mb-8 sm:grid-cols-3">
-          <StatCardWithExplain title="Net Worth" value={formatCurrency(data.current.netWorth)} />
+          <StatCardWithExplain title="Net Worth" value={formatCurrency(data.current.netWorth)} provenance={provenance} />
           {data.current.totalAssets != null && (
-            <StatCardWithExplain title="Total Assets" value={formatCurrency(data.current.totalAssets)} explainMetric="net_worth" />
+            <StatCardWithExplain
+              title="Total Assets"
+              value={formatCurrency(data.current.totalAssets)}
+              explainMetric="net_worth"
+              provenance={provenance}
+            />
           )}
           {data.current.totalLiabilities != null && (
-            <StatCardWithExplain title="Total Liabilities" value={formatCurrency(data.current.totalLiabilities)} explainMetric="debt_ratio" />
+            <StatCardWithExplain
+              title="Total Liabilities"
+              value={formatCurrency(data.current.totalLiabilities)}
+              explainMetric="debt_ratio"
+              provenance={provenance}
+            />
           )}
         </div>
       )}

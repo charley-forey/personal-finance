@@ -37,4 +37,24 @@ jobs:
       - run: npm run db:migrate --workspace=@pf/database
       - run: npm run build
       - run: npm run test --workspace=@pf/analytics
+      - run: npm run test --workspace=@pf/intelligence
+      - run: npm run test --workspace=@pf/graph
+      - run: npm run test --workspace=@pf/worker
       - run: npm run test --workspace=@pf/api --if-present
+
+  e2e:
+    runs-on: ubuntu-latest
+    # Playwright needs running web/API servers; keep non-blocking until a dedicated e2e env exists.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e --workspace=@pf/web
+        env:
+          CI: true
+          PLAYWRIGHT_BASE_URL: http://localhost:3000

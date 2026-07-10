@@ -190,6 +190,8 @@ export const api = {
     apiFetch<{ url: string | null; message?: string }>('/billing/checkout', { method: 'POST', body: JSON.stringify({ priceId }) }),
   billingPlan: () =>
     apiFetch<BillingPlan>('/billing/plan'),
+  featureFlags: () =>
+    apiFetch<FeatureFlags>('/feature-flags'),
   households: () => apiFetch<unknown[]>('/households'),
   auditLogs: () => apiFetch<AuditLog[]>('/compliance/audit-logs'),
   exportData: () => apiFetch<GdprExport>('/compliance/export'),
@@ -352,10 +354,13 @@ export interface ScenarioResult {
 
 export interface Liability {
   id: string;
+  accountId?: string;
   liabilityType?: string;
   apr?: string;
   minimumPayment?: string;
   nextPaymentDue?: string;
+  accountName?: string;
+  balance?: string | number | null;
 }
 
 export interface RecurringStream {
@@ -466,6 +471,8 @@ export interface UserPreferences {
   currency: string;
   timezone: string;
   notificationSettingsJson?: NotificationSettings;
+  /** Surfaced from notificationSettingsJson.onboardingCompleted */
+  onboardingCompleted?: boolean;
 }
 
 export interface NotificationSettings {
@@ -473,13 +480,24 @@ export interface NotificationSettings {
   inApp?: boolean;
   weeklyDigest?: boolean;
   sms?: boolean;
+  /** Opt-in for browser/Web Push when available (stub until FCM wired). */
+  push?: boolean;
+  /** Setup wizard finished; also mirrored on UserPreferences.onboardingCompleted */
+  onboardingCompleted?: boolean;
 }
 
 export interface BillingPlan {
   tier: string;
-  limits: { banks: number; aiChatsPerDay: number; historyDays: number };
+  limits: { banks: number; aiChatsPerDay: number; historyDays: number; documents?: number };
   aiMessagesLimit: number | null;
-  usage: { banks: number; aiMessagesThisMonth: number };
+  usage: { banks: number; aiMessagesThisMonth: number; documents?: number };
+}
+
+export interface FeatureFlags {
+  ai_agents: boolean;
+  monte_carlo: boolean;
+  tax_center: boolean;
+  advisor_portal: boolean;
 }
 
 export interface Notification {
