@@ -2,7 +2,15 @@ import { Worker, Queue } from 'bullmq';
 import { eq } from 'drizzle-orm';
 import { createPlaidClient } from '@pf/plaid-client';
 import { plaidItems } from '@pf/database';
-import { syncPlaidItem, processDomainEvents, computeBudgetActuals, categorizeOrgTransactions, categorizeTransaction, runPostSyncIntelligence } from '@pf/sync';
+import {
+  syncPlaidItem,
+  processDomainEvents,
+  computeBudgetActuals,
+  categorizeOrgTransactions,
+  categorizeTransaction,
+  runPostSyncIntelligence,
+  buildActionQueueFromSync,
+} from '@pf/sync';
 import { decryptToken, requireEncryptionKey } from './crypto.js';
 
 const connection = {
@@ -49,28 +57,51 @@ export function createPlaidSyncHandler(db: ReturnType<typeof import('@pf/databas
   const key = requireEncryptionKey(process.env.TOKEN_ENCRYPTION_KEY, process.env.NODE_ENV ?? 'development');
 
   return async (job: { data: { itemId: string; orgId: string } }) => {
+    if (process.env.PLAID_SYNC_ENABLED === 'false') {
+      console.warn('PLAID_SYNC_ENABLED=false — skipping sync job', job.data.itemId);
+      return;
+    }
+
     const [item] = await db.select().from(plaidItems).where(eq(plaidItems.id, job.data.itemId));
     if (!item) return;
 
-    const accessToken = decryptToken(item.accessTokenEncrypted, key);
-    await syncPlaidItem(db, plaid, job.data.itemId, job.data.orgId, accessToken, {
-      categorize: (oid, txnId) => categorizeTransaction(db, oid, txnId),
-    });
-    await categorizeOrgTransactions(db, job.data.orgId);
-    await computeBudgetActuals(db, job.data.orgId);
-    await processDomainEvents(db);
-
-    const intel = await runPostSyncIntelligence(db, job.data.orgId);
-    for (const notif of intel.notifications) {
-      await notificationsQueue.add('proactive', {
-        orgId: job.data.orgId,
-        type: notif.type,
-        notificationType: notif.notificationType ?? notif.type,
-        title: notif.title,
-        body: notif.body,
-        createInApp: true,
-        sendEmail: false,
+    try {
+      const accessToken = decryptToken(item.accessTokenEncrypted, key);
+      await syncPlaidItem(db, plaid, job.data.itemId, job.data.orgId, accessToken, {
+        categorize: (oid, txnId) => categorizeTransaction(db, oid, txnId),
       });
+      await categorizeOrgTransactions(db, job.data.orgId);
+      await computeBudgetActuals(db, job.data.orgId);
+      await processDomainEvents(db);
+
+      const intel = await runPostSyncIntelligence(db, job.data.orgId);
+      await buildActionQueueFromSync(db, job.data.orgId, intel);
+
+      try {
+        const { computeFeatureStore } = await import('@pf/intelligence');
+        await computeFeatureStore(db, job.data.orgId);
+      } catch (err) {
+        console.warn('Feature store after sync failed', err);
+      }
+
+      for (const notif of intel.notifications) {
+        await notificationsQueue.add('proactive', {
+          orgId: job.data.orgId,
+          type: notif.type,
+          notificationType: notif.notificationType ?? notif.type,
+          title: notif.title,
+          body: notif.body,
+          createInApp: true,
+          sendEmail: false,
+        });
+      }
+    } catch (err) {
+      const code = err instanceof Error ? err.message.slice(0, 120) : 'SYNC_FAILED';
+      await db
+        .update(plaidItems)
+        .set({ syncStatus: 'error', errorCode: code })
+        .where(eq(plaidItems.id, job.data.itemId));
+      throw err;
     }
   };
 }

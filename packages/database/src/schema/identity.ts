@@ -28,11 +28,20 @@ export const grantTypeEnum = pgEnum('grant_type', ['rsu', 'iso', 'nso', 'espp'])
 export const lifePlanTypeEnum = pgEnum('life_plan_type', ['home', 'college', 'wedding', 'car', 'sabbatical', 'custom']);
 export const agentTypeEnum = pgEnum('agent_type', ['tax_advisor', 'retirement_planner', 'budget_coach', 'investment_analyst', 'general_cfo']);
 
+export const orgLifecycleStatusEnum = pgEnum('org_lifecycle_status', [
+  'active',
+  'suspended',
+  'pending_deletion',
+]);
+
 export const organizations = pgTable('organizations', {
   id: uuid('id').primaryKey().defaultRandom(),
   workosOrgId: text('workos_org_id').unique(),
   name: text('name').notNull(),
   planTier: planTierEnum('plan_tier').default('free').notNull(),
+  status: orgLifecycleStatusEnum('status').default('active').notNull(),
+  deletionScheduledAt: timestamp('deletion_scheduled_at', { withTimezone: true }),
+  stripeCustomerId: text('stripe_customer_id'),
   settingsJson: jsonb('settings_json').$type<Record<string, unknown>>().default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -43,6 +52,7 @@ export const users = pgTable('users', {
   email: text('email').notNull(),
   name: text('name'),
   avatarUrl: text('avatar_url'),
+  preferredOrgId: uuid('preferred_org_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -55,6 +65,40 @@ export const organizationMembers = pgTable(
     joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [primaryKey({ columns: [t.orgId, t.userId] })],
+);
+
+export const organizationInvites = pgTable(
+  'organization_invites',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    email: text('email').notNull(),
+    role: memberRoleEnum('role').default('viewer').notNull(),
+    invitedByUserId: uuid('invited_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    status: text('status').default('pending').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('org_invites_org_idx').on(t.orgId),
+    index('org_invites_email_idx').on(t.email),
+  ],
+);
+
+export const orgConsents = pgTable(
+  'org_consents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    purpose: text('purpose').notNull(),
+    version: text('version').default('1').notNull(),
+    granted: boolean('granted').default(false).notNull(),
+    grantedAt: timestamp('granted_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    updatedByUserId: uuid('updated_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex('org_consents_org_purpose_idx').on(t.orgId, t.purpose)],
 );
 
 export const userPreferences = pgTable('user_preferences', {

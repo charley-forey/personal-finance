@@ -6,6 +6,7 @@ import { PageError, PageLoading } from '@/components/page-states';
 import { EmptyState, StatCard } from '@/components/ui';
 import { useLiabilities } from '@/hooks/use-finance';
 import { formatCurrency } from '@/lib/api';
+import { PlaidLinkButton } from '@/components/plaid-link-button';
 
 export default function CreditPage() {
   const { data: liabilities, isLoading, error } = useLiabilities();
@@ -57,6 +58,7 @@ export default function CreditPage() {
           icon={CreditCard}
           title="No liabilities synced"
           description="Link credit or loan accounts via Plaid to track balances and payment schedules."
+          action={<PlaidLinkButton />}
         />
       )}
     </div>

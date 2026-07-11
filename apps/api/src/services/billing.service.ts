@@ -51,18 +51,27 @@ export class BillingService {
       const orgId = session.metadata?.orgId;
       if (orgId && session.subscription) {
         const subId = typeof session.subscription === 'string' ? session.subscription : session.subscription.id;
+        const customerId =
+          typeof session.customer === 'string' ? session.customer : session.customer?.id ?? null;
         const sub = await this.stripe.subscriptions.retrieve(subId);
         const tier = this.mapPriceToTier(sub.items.data[0]?.price.id ?? '');
 
         await this.db.insert(subscriptions).values({
           orgId,
+          stripeCustomerId: customerId,
           stripeSubscriptionId: subId,
           planTier: tier,
           status: sub.status,
           currentPeriodEnd: new Date(sub.current_period_end * 1000),
         });
 
-        await this.db.update(organizations).set({ planTier: tier as 'free' }).where(eq(organizations.id, orgId));
+        await this.db
+          .update(organizations)
+          .set({
+            planTier: tier as 'free' | 'pro' | 'family' | 'advisor',
+            ...(customerId ? { stripeCustomerId: customerId } : {}),
+          })
+          .where(eq(organizations.id, orgId));
       }
     }
 
@@ -170,6 +179,7 @@ export class BillingService {
       this.countDocuments(orgId),
     ]);
     return {
+      orgId,
       tier,
       limits,
       aiMessagesLimit: this.getMonthlyAiMessageLimit(tier),

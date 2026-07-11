@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, SetMetadata, Inject, forwardRef, Optional } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException, SetMetadata, Inject, forwardRef, Optional } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { jwtVerify, createRemoteJWKSet } from 'jose';
@@ -119,9 +119,16 @@ export class AuthGuard implements CanActivate {
         name,
         workosOrgId,
       );
+
+      const actAsOrg = (request.headers['x-act-as-org'] as string | undefined)?.trim();
+      const actAsSession = (request.headers['x-act-as-session'] as string | undefined)?.trim();
+      if (actAsOrg) {
+        request.auth = await this.authService.applyActAsOrg(request.auth, actAsOrg, actAsSession);
+      }
+
       return true;
     } catch (error) {
-      if (error instanceof UnauthorizedException) throw error;
+      if (error instanceof UnauthorizedException || error instanceof ForbiddenException) throw error;
       throw new UnauthorizedException('Invalid token');
     }
   }

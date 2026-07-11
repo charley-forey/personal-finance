@@ -47,6 +47,14 @@ export function parseDecimal(value: string | null | undefined): number {
 
 export const PLAID_PRODUCTS = ['transactions', 'investments', 'liabilities'] as const;
 
+export {
+  PLAID_STALE_MS,
+  deriveAccountPurpose,
+  purposeFromAccount,
+  ACCOUNT_PURPOSE_LABELS,
+  type AccountPurpose,
+} from './account-taxonomy';
+
 export const DEFAULT_PNL_ROWS = [
   'Salary',
   'Other Income',
@@ -126,3 +134,86 @@ export const INTELLIGENCE_QUALITY_GATES = {
   agentLatencyP95Ms: 8000,
   llmCostPerProUserUsd: 0.5,
 } as const;
+
+/** Platform Control Plane roles (distinct from org member roles). */
+export type PlatformRole =
+  | 'platform_owner'
+  | 'platform_admin'
+  | 'support_agent'
+  | 'billing_ops'
+  | 'eng_ops'
+  | 'security_compliance'
+  | 'readonly_analyst';
+
+export type PlatformPermission =
+  | 'orgs:read'
+  | 'orgs:write'
+  | 'users:read'
+  | 'billing:read'
+  | 'billing:write'
+  | 'flags:read'
+  | 'flags:write'
+  | 'metrics:read'
+  | 'queues:manage'
+  | 'audit:read'
+  | 'dsar:execute'
+  | 'support:write'
+  | 'impersonate'
+  | 'ai:gov'
+  | 'admins:manage'
+  | 'advisor:read'
+  | 'advisor:write';
+
+export const PLATFORM_ROLE_PERMISSIONS: Record<PlatformRole, PlatformPermission[]> = {
+  platform_owner: [
+    'orgs:read', 'orgs:write', 'users:read', 'billing:read', 'billing:write',
+    'flags:read', 'flags:write', 'metrics:read', 'queues:manage', 'audit:read',
+    'dsar:execute', 'support:write', 'impersonate', 'ai:gov', 'admins:manage',
+    'advisor:read', 'advisor:write',
+  ],
+  platform_admin: [
+    'orgs:read', 'orgs:write', 'users:read', 'billing:read', 'billing:write',
+    'flags:read', 'flags:write', 'metrics:read', 'queues:manage', 'audit:read',
+    'dsar:execute', 'support:write', 'impersonate', 'ai:gov',
+    'advisor:read', 'advisor:write',
+  ],
+  support_agent: [
+    'orgs:read', 'users:read', 'billing:read', 'metrics:read', 'support:write',
+    'impersonate', 'flags:read',
+  ],
+  billing_ops: [
+    'orgs:read', 'users:read', 'billing:read', 'billing:write', 'metrics:read',
+  ],
+  eng_ops: [
+    'orgs:read', 'users:read', 'flags:read', 'flags:write', 'metrics:read',
+    'queues:manage', 'ai:gov',
+  ],
+  security_compliance: [
+    'orgs:read', 'users:read', 'audit:read', 'dsar:execute', 'metrics:read',
+    'admins:manage',
+  ],
+  readonly_analyst: [
+    'orgs:read', 'users:read', 'billing:read', 'metrics:read', 'flags:read',
+    'audit:read', 'advisor:read',
+  ],
+};
+
+export interface PlatformAdminContext {
+  isPlatformAdmin: boolean;
+  email: string;
+  userId: string;
+  role: PlatformRole | null;
+  permissions: PlatformPermission[];
+  viaBreakGlass: boolean;
+}
+
+export function permissionsForRole(role: PlatformRole): PlatformPermission[] {
+  return PLATFORM_ROLE_PERMISSIONS[role] ?? [];
+}
+
+export function hasPlatformPermission(
+  ctx: Pick<PlatformAdminContext, 'permissions'>,
+  permission: PlatformPermission,
+): boolean {
+  return ctx.permissions.includes(permission);
+}

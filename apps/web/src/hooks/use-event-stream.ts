@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { getAuthToken } from '@/lib/api';
+import { getAuthToken, handleUnauthorized } from '@/lib/api';
+import { getActAsSession } from '@/lib/act-as';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -68,19 +69,37 @@ function invalidateForEvent(qc: ReturnType<typeof useQueryClient>, eventType: st
   qc.invalidateQueries();
 }
 
+class UnauthorizedSseError extends Error {
+  constructor() {
+    super('SSE unauthorized');
+    this.name = 'UnauthorizedSseError';
+  }
+}
+
 async function consumeSse(
   url: string,
   token: string,
   onDomainEvent: (payload: { eventType?: string }) => void,
   signal: AbortSignal,
 ): Promise<void> {
+  const actAs = getActAsSession();
   const res = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: 'text/event-stream',
+      ...(actAs
+        ? {
+            'X-Act-As-Org': actAs.orgId,
+            'X-Act-As-Session': actAs.sessionId,
+          }
+        : {}),
     },
     signal,
   });
+
+  if (res.status === 401) {
+    throw new UnauthorizedSseError();
+  }
 
   if (!res.ok || !res.body) {
     throw new Error(`SSE connect failed: ${res.status}`);
@@ -123,12 +142,6 @@ export function useEventStream() {
   const [, setTick] = useState(0);
 
   useEffect(() => {
-    const token = getAuthToken();
-    if (!token) {
-      setStreamStatus({ connected: false, reconnecting: false });
-      return;
-    }
-
     const controller = new AbortController();
     let cancelled = false;
     let attempt = 0;
@@ -137,6 +150,11 @@ export function useEventStream() {
 
     const connect = async () => {
       while (!cancelled) {
+        const token = getAuthToken();
+        if (!token) {
+          setStreamStatus({ connected: false, reconnecting: false });
+          return;
+        }
         try {
           setStreamStatus({ connected: streamStatus.connected, reconnecting: !streamStatus.connected });
           await consumeSse(
@@ -151,13 +169,17 @@ export function useEventStream() {
             },
             controller.signal,
           );
-          // Clean close — reset backoff and reconnect
           attempt = 0;
           if (!cancelled) {
             setStreamStatus({ connected: false, reconnecting: true });
           }
-        } catch {
+        } catch (err) {
           if (cancelled || controller.signal.aborted) return;
+          if (err instanceof UnauthorizedSseError) {
+            setStreamStatus({ connected: false, reconnecting: false });
+            handleUnauthorized();
+            return;
+          }
           setStreamStatus({ connected: false, reconnecting: true });
           setTick((t) => t + 1);
           const delay = Math.min(MAX_BACKOFF_MS, BASE_BACKOFF_MS * 2 ** attempt);

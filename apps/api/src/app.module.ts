@@ -57,6 +57,8 @@ import { ProfileModule } from './modules/profile/profile.module';
 
 import { RevolutionModule } from './modules/revolution/revolution.module';
 
+import { AdminModule } from './modules/admin/admin.module';
+
 
 
 @Module({
@@ -126,6 +128,8 @@ import { RevolutionModule } from './modules/revolution/revolution.module';
     ProfileModule,
 
     RevolutionModule,
+
+    AdminModule,
 
   ],
 

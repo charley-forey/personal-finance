@@ -7,34 +7,76 @@ import { useEventStreamStatus } from '@/hooks/use-event-stream';
 import { Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { PLAID_STALE_MS } from '@pf/shared';
 
 function isStale(lastSyncedAt?: string) {
   if (!lastSyncedAt) return true;
-  const age = Date.now() - new Date(lastSyncedAt).getTime();
-  return age > 36 * 60 * 60 * 1000;
+  return Date.now() - new Date(lastSyncedAt).getTime() > PLAID_STALE_MS;
+}
+
+function isSyncing(status?: string) {
+  return status === 'pending' || status === 'syncing';
 }
 
 export function SyncHealthBanner() {
-  const { data: items } = usePlaidItems();
+  const { data: items, refetch } = usePlaidItems();
   const { connected, reconnecting } = useEventStreamStatus();
   const qc = useQueryClient();
-  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
 
   const problemItems =
     items?.filter(
       (i) =>
         i.loginRequired ||
         i.syncStatus === 'error' ||
-        i.syncStatus === 'failed' ||
         Boolean(i.errorCode) ||
-        isStale(i.lastSyncedAt),
+        isStale(i.lastSyncedAt) ||
+        (i.syncWarnings?.length ?? 0) > 0,
     ) ?? [];
 
+  const anyPending = items?.some((i) => isSyncing(i.syncStatus) || syncingIds.has(i.id)) ?? false;
+
+  useEffect(() => {
+    if (!anyPending) return;
+    const id = setInterval(() => {
+      void refetch();
+      void qc.invalidateQueries({ queryKey: ['plaid-items'] });
+      void qc.invalidateQueries({ queryKey: ['accounts'] });
+    }, 2000);
+    return () => clearInterval(id);
+  }, [anyPending, refetch, qc]);
+
+  useEffect(() => {
+    if (!items) return;
+    setSyncingIds((prev) => {
+      const next = new Set(prev);
+      for (const id of prev) {
+        const item = items.find((i) => i.id === id);
+        if (item && !isSyncing(item.syncStatus)) next.delete(id);
+      }
+      return next;
+    });
+  }, [items]);
+
   const showSse = !connected;
-  if (problemItems.length === 0 && !showSse) return null;
+  if (problemItems.length === 0 && !showSse && !anyPending) return null;
 
   const primary = problemItems[0];
+  const busy = anyPending || (primary ? syncingIds.has(primary.id) : false);
+
+  async function syncItems(ids: string[]) {
+    setError(null);
+    setSyncingIds(new Set(ids));
+    try {
+      await Promise.all(ids.map((id) => api.triggerSync(id)));
+      await qc.invalidateQueries({ queryKey: ['plaid-items'] });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sync failed');
+      setSyncingIds(new Set());
+    }
+  }
 
   return (
     <div
@@ -53,18 +95,24 @@ export function SyncHealthBanner() {
               {reconnecting ? 'Reconnecting to live updates…' : 'Live updates disconnected'}
             </p>
           )}
-          {primary && (
+          {busy && (
+            <p className="font-medium text-amber-100">Syncing accounts…</p>
+          )}
+          {primary && !busy && (
             <p className="font-medium text-amber-100">
               {primary.loginRequired
                 ? `${primary.institutionName ?? 'A bank'} needs reconnection`
                 : primary.syncStatus === 'error' || primary.errorCode
                   ? `Sync issue with ${primary.institutionName ?? 'a linked account'}`
-                  : `${primary.institutionName ?? 'Account'} data may be stale`}
+                  : (primary.syncWarnings?.length ?? 0) > 0
+                    ? `${primary.institutionName ?? 'Account'}: connection may need upgrade`
+                    : `${primary.institutionName ?? 'Account'} data may be stale`}
             </p>
           )}
-          {problemItems.length > 1 && (
+          {problemItems.length > 1 && !busy && (
             <p className="text-amber-200/80 text-xs mt-1">{problemItems.length} institutions need attention</p>
           )}
+          {error && <p className="text-danger text-xs mt-1">{error}</p>}
         </div>
       </div>
       <div className="flex flex-wrap gap-2 shrink-0">
@@ -75,23 +123,19 @@ export function SyncHealthBanner() {
           >
             Reconnect
           </Link>
-        ) : primary ? (
+        ) : primary || problemItems.length > 0 ? (
           <Button
             size="sm"
             variant="secondary"
-            disabled={syncingId === primary.id}
-            onClick={async () => {
-              setSyncingId(primary.id);
-              try {
-                await api.triggerSync(primary.id);
-                await qc.invalidateQueries({ queryKey: ['plaid-items'] });
-              } finally {
-                setSyncingId(null);
-              }
-            }}
+            disabled={busy}
+            onClick={() =>
+              void syncItems(
+                problemItems.filter((i) => !i.loginRequired).map((i) => i.id),
+              )
+            }
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Sync now
+            <RefreshCw className={`w-3.5 h-3.5 ${busy ? 'animate-spin' : ''}`} />
+            {busy ? 'Syncing…' : problemItems.length > 1 ? 'Sync all' : 'Sync now'}
           </Button>
         ) : null}
         <Link

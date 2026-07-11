@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CreditCard, Sparkles } from 'lucide-react';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import { AppPageHeader, Card } from '@/components/ui';
 import { PageLoading } from '@/components/page-states';
 import { Badge, Button, Input, Select, StatCard } from '@/components/ui';
@@ -11,8 +12,188 @@ import { usePreferences, useBillingPlan } from '@/hooks/use-finance';
 import { api, clearAuthToken, type NotificationSettings } from '@/lib/api';
 import { Modal } from '@/components/ui/modal';
 import { getDemoMode, setDemoMode } from '@/components/demo-mode-banner';
+import { usePlatformAdmin } from '@/hooks/use-platform-admin';
+import { adminApi } from '@/lib/admin-api';
 
 const PRIVACY_KEY = 'pf_privacy_blur';
+
+function OrgMembersAndPrivacySections() {
+  const qc = useQueryClient();
+  const { data: memberships } = useQuery({
+    queryKey: ['org-memberships'],
+    queryFn: () => api.myOrganizations(),
+  });
+  const { data: members, refetch: refetchMembers } = useQuery({
+    queryKey: ['org-members'],
+    queryFn: () => api.orgMembers(),
+  });
+  const { data: consents, refetch: refetchConsents } = useQuery({
+    queryKey: ['consents'],
+    queryFn: () => api.listConsents(),
+  });
+  const { data: catalog } = useQuery({
+    queryKey: ['data-catalog'],
+    queryFn: () => api.dataCatalog(),
+  });
+  const { data: securityEvents } = useQuery({
+    queryKey: ['security-events'],
+    queryFn: () => api.securityEvents(),
+  });
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'admin' | 'viewer'>('viewer');
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+
+  return (
+    <>
+      {(memberships?.length ?? 0) > 1 && (
+        <Card title="Organizations">
+          <p className="text-sm text-muted mt-2 mb-3">Switch which organization this session uses.</p>
+          <ul className="space-y-2">
+            {(memberships ?? []).map((m) => (
+              <li key={m.orgId} className="flex items-center justify-between gap-2">
+                <span className="text-sm">
+                  {m.orgName} <Badge variant={m.isCurrent ? 'primary' : 'default'}>{m.role}</Badge>
+                </span>
+                {!m.isCurrent && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={async () => {
+                      await api.switchOrganization(m.orgId);
+                      window.location.reload();
+                    }}
+                  >
+                    Switch
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <Card title="Members">
+        <p className="text-sm text-muted mt-2 mb-3">Invite family or collaborators and manage roles.</p>
+        <ul className="space-y-2 mb-4">
+          {(members ?? []).map((m) => (
+            <li key={m.userId} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+              <span>
+                {m.email} <Badge variant="default">{m.role}</Badge>
+              </span>
+              <div className="flex gap-2">
+                <select
+                  className="rounded-md border border-card-border bg-card px-2 py-1 text-xs"
+                  value={m.role}
+                  onChange={(e) =>
+                    void api
+                      .updateOrgMemberRole(m.userId, e.target.value as 'owner' | 'admin' | 'viewer')
+                      .then(() => refetchMembers())
+                  }
+                >
+                  <option value="owner">owner</option>
+                  <option value="admin">admin</option>
+                  <option value="viewer">viewer</option>
+                </select>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    void api.removeOrgMember(m.userId).then(() => {
+                      void refetchMembers();
+                      void qc.invalidateQueries({ queryKey: ['org-members'] });
+                    })
+                  }
+                >
+                  Remove
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className="flex flex-wrap gap-2 items-end">
+          <Input label="Invite email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
+          <Select
+            label="Role"
+            value={inviteRole}
+            onChange={(e) => setInviteRole(e.target.value as 'admin' | 'viewer')}
+            options={[
+              { value: 'viewer', label: 'Viewer' },
+              { value: 'admin', label: 'Admin' },
+            ]}
+          />
+          <Button
+            size="sm"
+            disabled={inviteBusy || !inviteEmail}
+            onClick={async () => {
+              setInviteBusy(true);
+              setInviteError(null);
+              try {
+                await api.inviteOrgMember(inviteEmail, inviteRole);
+                setInviteEmail('');
+                await refetchMembers();
+              } catch (err) {
+                setInviteError(err instanceof Error ? err.message : 'Invite failed');
+              } finally {
+                setInviteBusy(false);
+              }
+            }}
+          >
+            Invite
+          </Button>
+        </div>
+        {inviteError && <p className="text-xs text-danger mt-2">{inviteError}</p>}
+      </Card>
+
+      <Card title="Consent for use">
+        <p className="text-sm text-muted mt-2 mb-3">
+          Storage stays max-capture. These toggles control secondary uses (AI full context, advisor sharing, marketing).
+        </p>
+        <ul className="space-y-3">
+          {(consents ?? []).map((c) => (
+            <li key={c.purpose} className="flex items-center justify-between gap-2 text-sm">
+              <span className="capitalize">{c.purpose.replace(/_/g, ' ')}</span>
+              <Button
+                size="sm"
+                variant={c.granted ? 'secondary' : 'primary'}
+                onClick={() => void api.updateConsent(c.purpose, !c.granted).then(() => refetchConsents())}
+              >
+                {c.granted ? 'Revoke' : 'Grant'}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      <Card title="Your data">
+        <p className="text-sm text-muted mt-2 mb-3">What we store and how long we keep it.</p>
+        <ul className="space-y-2 text-sm">
+          {(catalog ?? []).map((cat) => (
+            <li key={cat.key}>
+              <span className="font-medium">{cat.label}</span>
+              <span className="text-muted"> — {cat.description}. Retained: {cat.retainedUntil}</span>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      <Card title="Security center">
+        <p className="text-sm text-muted mt-2 mb-3">Recent sensitive actions for this organization.</p>
+        {!securityEvents?.length ? (
+          <p className="text-sm text-muted">No security events yet.</p>
+        ) : (
+          <ul className="space-y-1 text-sm max-h-48 overflow-y-auto">
+            {securityEvents.slice(0, 20).map((e) => (
+              <li key={e.id} className="text-muted">
+                {new Date(e.createdAt).toLocaleString()} · {e.action}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </>
+  );
+}
 
 const TIER_LABELS: Record<string, string> = {
   free: 'Free',
@@ -63,8 +244,12 @@ function writePrivacyBlur(enabled: boolean) {
 }
 
 export default function SettingsPage() {
+  const { user, signOut } = useAuth();
+  const { isPlatformAdmin } = usePlatformAdmin();
+  const queryClient = useQueryClient();
   const { data: prefs, refetch } = usePreferences();
-  const { data: billing, isLoading: billingLoading } = useBillingPlan();
+  const { data: billing, isLoading: billingLoading, refetch: refetchBilling } = useBillingPlan();
+  const [planBusy, setPlanBusy] = useState(false);
   const { data: auditLogs, isLoading: auditLoading } = useQuery({
     queryKey: ['audit-logs'],
     queryFn: () => api.auditLogs(),
@@ -121,7 +306,15 @@ export default function SettingsPage() {
     setDeleting(true);
     setDeleteError(null);
     try {
-      await api.deleteAccount();
+      const result = await api.deleteAccount(false);
+      if (result.pendingDeletion) {
+        setDeleteOpen(false);
+        setDeleteError(null);
+        alert(
+          `Deletion scheduled for ${result.deletionScheduledAt ? new Date(result.deletionScheduledAt).toLocaleString() : 'soon'}. You can cancel from Settings before then.`,
+        );
+        return;
+      }
       clearAuthToken();
       window.location.href = '/';
     } catch (err) {
@@ -147,6 +340,66 @@ export default function SettingsPage() {
     <div>
       <AppPageHeader title="Settings" description="Profile, preferences, and billing" />
       <div className="space-y-4 max-w-2xl">
+        <Card title="Account">
+          <div className="mt-2 space-y-3">
+            <p className="text-sm">
+              Signed in as <span className="font-medium">{user?.email ?? 'Loading…'}</span>
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={async () => {
+                clearAuthToken();
+                await signOut({ returnTo: `${window.location.origin}/login` });
+              }}
+            >
+              Sign out
+            </Button>
+          </div>
+        </Card>
+
+        {isPlatformAdmin && (
+          <Card title="Platform testing">
+            <p className="text-sm text-muted mt-2 mb-3">
+              Switch this org&apos;s plan tier to preview limits and UX. Open Control Plane to view as any customer org.
+            </p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {(['free', 'pro', 'family', 'advisor'] as const).map((tierOption) => (
+                <Button
+                  key={tierOption}
+                  size="sm"
+                  variant={billing?.tier === tierOption ? 'primary' : 'secondary'}
+                  disabled={planBusy || !billing?.orgId}
+                  onClick={async () => {
+                    if (!billing?.orgId) return;
+                    setPlanBusy(true);
+                    try {
+                      await adminApi.updatePlan(
+                        billing.orgId,
+                        tierOption,
+                        `UX plan preview → ${tierOption}`,
+                      );
+                      await refetchBilling();
+                      await queryClient.invalidateQueries({ queryKey: ['billing-plan'] });
+                    } finally {
+                      setPlanBusy(false);
+                    }
+                  }}
+                >
+                  {tierOption}
+                </Button>
+              ))}
+            </div>
+            <p className="text-xs text-muted mb-3">
+              Current: <strong>{billing?.tier ?? '…'}</strong>
+              {billing?.orgId ? ` · org ${billing.orgId.slice(0, 8)}…` : ''}
+            </p>
+            <Link href="/app/admin" className="text-sm text-primary hover:underline">
+              Open Control Plane →
+            </Link>
+          </Card>
+        )}
+
         <Card title="Preferences">
           <div className="space-y-4 mt-2">
             <Select
@@ -410,9 +663,11 @@ export default function SettingsPage() {
           )}
         </Card>
 
+        <OrgMembersAndPrivacySections />
+
         <Card title="Privacy & Compliance">
           <p className="text-sm text-muted mt-2 mb-4">
-            Review audit activity, export your data (GDPR), or permanently delete your account.
+            Review audit activity, export your data (GDPR), or schedule account deletion.
           </p>
 
           <div className="space-y-6">
@@ -464,11 +719,19 @@ export default function SettingsPage() {
             <div className="pt-2 border-t border-card-border">
               <h3 className="text-sm font-medium mb-2 text-danger">Delete account</h3>
               <p className="text-sm text-muted mb-3">
-                Permanently delete your organization and all associated data. Connected Plaid items will be removed.
-                This action cannot be undone.
+                Schedules deletion with a grace period. Connected Plaid items are removed when deletion executes.
+                Cancel anytime before the scheduled date.
               </p>
               <Button variant="danger" size="sm" onClick={() => setDeleteOpen(true)}>
-                Delete my account
+                Schedule account deletion
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="ml-2"
+                onClick={() => void api.cancelAccountDeletion().then(() => alert('Deletion cancelled'))}
+              >
+                Cancel pending deletion
               </Button>
             </div>
           </div>

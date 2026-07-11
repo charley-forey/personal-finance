@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 import { TrendingUp } from 'lucide-react';
 import { AppPageHeader, Card, ProvenanceChip } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
-import { PageContextBanner } from '@/components/page-context-banner';
 import { EmptyState, Skeleton } from '@/components/ui';
 import { StatCardWithExplain } from '@/components/stat-card-with-explain';
 import { useFormatCurrency } from '@/hooks/use-currency';
 import { api } from '@/lib/api';
+import { PlaidLinkButton } from '@/components/plaid-link-button';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function NetWorthPage() {
@@ -40,10 +40,6 @@ export default function NetWorthPage() {
   return (
     <div>
       <AppPageHeader title="Net Worth" description="Assets minus liabilities over time" />
-
-      <div className="mb-4">
-        <PageContextBanner />
-      </div>
 
       {error && <PageError message={error} />}
       {loading && <PageLoading variant="chart" className="mb-6" />}
@@ -78,6 +74,7 @@ export default function NetWorthPage() {
             icon={TrendingUp}
             title="No history yet"
             description="Net worth snapshots will appear after you link accounts and sync data."
+            action={<PlaidLinkButton />}
           />
         ) : (
           <ResponsiveContainer width="100%" height={300}>

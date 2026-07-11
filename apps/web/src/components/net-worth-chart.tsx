@@ -1,7 +1,14 @@
 'use client';
 
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Line, LineChart } from 'recharts';
 import { useFormatCurrency } from '@/hooks/use-currency';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartXAxis,
+  ChartYAxis,
+  CHART_COLORS,
+} from '@/components/ui';
 
 interface NetWorthChartProps {
   data: Array<{ date: string; value: number }>;
@@ -10,18 +17,13 @@ interface NetWorthChartProps {
 export function NetWorthChart({ data }: NetWorthChartProps) {
   const formatCurrency = useFormatCurrency();
   return (
-    <ResponsiveContainer width="100%" height={220}>
+    <ChartContainer height={220}>
       <LineChart data={data}>
-        <XAxis dataKey="date" stroke="#71717a" fontSize={11} tickMargin={8} />
-        <YAxis
-          stroke="#71717a"
-          fontSize={11}
-          width={48}
-          tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-        />
-        <Tooltip formatter={(v: number) => formatCurrency(v)} />
-        <Line type="monotone" dataKey="value" stroke="#22c55e" strokeWidth={2} dot={false} />
+        <ChartXAxis dataKey="date" tickMargin={8} />
+        <ChartYAxis width={48} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+        <ChartTooltip formatter={(v) => formatCurrency(Number(v))} />
+        <Line type="monotone" dataKey="value" stroke={CHART_COLORS[0]} strokeWidth={2} dot={false} />
       </LineChart>
-    </ResponsiveContainer>
+    </ChartContainer>
   );
 }

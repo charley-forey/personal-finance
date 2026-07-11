@@ -2,11 +2,11 @@ import clsx from 'clsx';
 import type { HTMLAttributes } from 'react';
 
 const variants = {
-  default: 'bg-zinc-800 text-zinc-300 border-zinc-700',
-  success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  danger: 'bg-red-500/10 text-red-400 border-red-500/20',
-  info: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  default: 'bg-card text-muted border-card-border',
+  success: 'bg-success/10 text-success border-success/20',
+  warning: 'bg-warning/10 text-warning border-warning/20',
+  danger: 'bg-danger/10 text-danger border-danger/20',
+  info: 'bg-info/10 text-info border-info/20',
   primary: 'bg-primary/10 text-primary border-primary/20',
 } as const;
 

@@ -9,9 +9,11 @@ import {
   Param,
   Query,
   Req,
+  Headers,
   Inject,
   UseGuards,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
@@ -29,8 +31,8 @@ import {
   taxLots,
   userPreferences,
 } from '@pf/database';
+import { isPlatformAdmin } from '../../common/env.util';
 import { AuthGuard, getAuth, RequireRoles } from '../../common/auth.guard';
-import { PlatformAdminGuard } from '../../common/platform-admin.guard';
 import { PlanLimitsGuard, RequirePlanLimit } from '../billing/plan-limits.guard';
 import {
   NotificationService,
@@ -43,10 +45,14 @@ import {
   HouseholdService,
   ApiKeyService,
   ComplianceService,
+  OrgMembersService,
+  ConsentService,
+  DATA_CATALOG,
 } from '../../services/platform.services';
 import { CategoryService } from '../../services/category.service';
 import { AnalyticsService } from '../../services/analytics.services';
 import { StorageService } from '../../services/storage.service';
+import { AuthService } from '../../services/core.services';
 import { DATABASE } from '../../database.module';
 import { CreateRuleDto, UpdatePreferencesDto, UpdateRuleDto } from '../../dto';
 
@@ -67,6 +73,9 @@ export class PlatformController {
     private apiKeys: ApiKeyService,
     private analytics: AnalyticsService,
     private compliance: ComplianceService,
+    private orgMembers: OrgMembersService,
+    private consents: ConsentService,
+    private authService: AuthService,
     private storage: StorageService,
     private config: ConfigService,
     @Inject(DATABASE) private db: Database,
@@ -205,7 +214,7 @@ export class PlatformController {
     await this.db
       .update(documents)
       .set({ parsedStatus: 'processing' })
-      .where(eq(documents.id, id));
+      .where(and(eq(documents.id, id), eq(documents.orgId, auth.orgId)));
 
     const rawText =
       body.rawText ??
@@ -229,7 +238,7 @@ export class PlatformController {
     const [updated] = await this.db
       .update(documents)
       .set({ parsedStatus: 'completed', extractedDataJson: extracted })
-      .where(eq(documents.id, id))
+      .where(and(eq(documents.id, id), eq(documents.orgId, auth.orgId)))
       .returning();
 
     return updated;
@@ -327,13 +336,6 @@ export class PlatformController {
       .returning();
 
     return rule;
-  }
-
-  @Get('admin/orgs')
-  @UseGuards(PlatformAdminGuard)
-  @RequireRoles('owner')
-  async adminSearch(@Query('q') q: string) {
-    return this.admin.searchOrgs(q ?? '');
   }
 
   @Get('integrations/providers')
@@ -496,25 +498,74 @@ export class PlatformController {
   }
 
   @Post('advisor/firms')
-  async createAdvisorFirm(@Body() body: { name: string }) {
-    const firm = await this.advisor.createFirm(body.name);
-    return { status: 'stub' as const, message: 'Advisor firm created in stub mode', firm };
+  @RequireRoles('owner')
+  async createAdvisorFirm(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Body() body: { name: string },
+  ) {
+    const auth = getAuth(req);
+    if (process.env.ADVISOR_PORTAL_ENABLED === 'false') {
+      throw new NotFoundException('Advisor portal is disabled');
+    }
+    const firm = await this.advisor.createFirm(body.name, auth.userId);
+    return { status: 'ok' as const, firm };
   }
 
   @Post('advisor/clients')
-  async linkAdvisorClient(@Body() body: { firmId: string; orgId: string; advisorUserId?: string }) {
-    const client = await this.advisor.linkClient(body.firmId, body.orgId, body.advisorUserId);
-    return { status: 'stub' as const, message: 'Advisor client link created in stub mode', client };
+  @RequireRoles('owner')
+  async linkAdvisorClient(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Body() body: { firmId: string; orgId?: string; advisorUserId?: string },
+  ) {
+    const auth = getAuth(req);
+    const client = await this.advisor.linkClient(
+      body.firmId,
+      body.orgId ?? auth.orgId,
+      {
+        userId: auth.userId,
+        orgId: auth.orgId,
+        isPlatformAdmin: isPlatformAdmin(auth.email),
+      },
+      body.advisorUserId,
+    );
+    return { status: 'ok' as const, client };
   }
 
   @Get('advisor/firms/:firmId/clients')
-  async listAdvisorClients(@Param('firmId') firmId: string) {
-    const clients = await this.advisor.listClients(firmId);
-    return {
-      status: 'stub' as const,
-      message: 'Advisor client list is a scaffolding stub',
-      clients,
-    };
+  @RequireRoles('admin')
+  async listAdvisorClients(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Param('firmId') firmId: string,
+  ) {
+    const auth = getAuth(req);
+    const clients = await this.advisor.listClients(firmId, {
+      userId: auth.userId,
+      isPlatformAdmin: isPlatformAdmin(auth.email),
+    });
+    return { status: 'ok' as const, clients };
+  }
+
+  @Post('advisor/clients/:id/accept')
+  @RequireRoles('owner')
+  async acceptAdvisorClient(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Param('id') id: string,
+  ) {
+    const auth = getAuth(req);
+    const client = await this.advisor.acceptClientInvite(id, auth.orgId, auth.userId);
+    return { status: 'ok' as const, client };
+  }
+
+  @Get('compliance/export')
+  @RequireRoles('owner')
+  async complianceExport(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Headers('x-step-up-token') stepUpToken?: string,
+  ) {
+    const { assertStepUp } = await import('../../common/step-up.util');
+    assertStepUp('data.export', stepUpToken);
+    const auth = getAuth(req);
+    return this.compliance.exportOrgData(auth.orgId, auth.userId);
   }
 
   @Get('households')
@@ -539,21 +590,118 @@ export class PlatformController {
     return this.apiKeys.create(getAuth(req).orgId, body.name, body.scopes);
   }
 
+  @Delete('api-keys/:id')
+  @RequireRoles('owner')
+  async revokeApiKey(@Req() req: { auth?: ReturnType<typeof getAuth> }, @Param('id') id: string) {
+    return this.apiKeys.revoke(getAuth(req).orgId, id);
+  }
+
+  @Get('org/members')
+  @RequireRoles('admin')
+  async listOrgMembers(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
+    return this.orgMembers.list(getAuth(req).orgId);
+  }
+
+  @Post('org/invites')
+  @RequireRoles('admin')
+  async inviteOrgMember(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Body() body: { email: string; role: 'owner' | 'admin' | 'viewer' },
+  ) {
+    const auth = getAuth(req);
+    return this.orgMembers.invite(auth.orgId, auth.userId, body.email, body.role);
+  }
+
+  @Patch('org/members/:userId')
+  @RequireRoles('owner')
+  async updateOrgMember(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Param('userId') userId: string,
+    @Body() body: { role: 'owner' | 'admin' | 'viewer' },
+  ) {
+    const auth = getAuth(req);
+    return this.orgMembers.updateRole(auth.orgId, auth.userId, userId, body.role);
+  }
+
+  @Delete('org/members/:userId')
+  @RequireRoles('owner')
+  async removeOrgMember(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Param('userId') userId: string,
+  ) {
+    const auth = getAuth(req);
+    return this.orgMembers.remove(auth.orgId, auth.userId, userId);
+  }
+
+  @Get('org/memberships')
+  async listMemberships(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
+    const auth = getAuth(req);
+    return this.authService.listMemberships(auth.userId, auth.orgId);
+  }
+
+  @Post('org/switch')
+  async switchOrg(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Body() body: { orgId: string },
+  ) {
+    const auth = getAuth(req);
+    return this.authService.switchOrganization(auth.userId, body.orgId);
+  }
+
+  @Get('consents')
+  async listConsents(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
+    return this.consents.list(getAuth(req).orgId);
+  }
+
+  @Post('consents')
+  @RequireRoles('admin')
+  async updateConsent(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Body() body: { purpose: string; granted: boolean },
+  ) {
+    const auth = getAuth(req);
+    return this.consents.set(auth.orgId, auth.userId, body.purpose, body.granted);
+  }
+
+  @Get('privacy/data-catalog')
+  async dataCatalog() {
+    return DATA_CATALOG;
+  }
+
+  @Get('security/events')
+  @RequireRoles('admin')
+  async securityEvents(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
+    const auth = getAuth(req);
+    const logs = await this.compliance.listAuditLogs(auth.orgId, 100);
+    return logs.filter((l) =>
+      /export|delete|disconnect|members\.|consent\.|impersonat|login|apikey|account\./i.test(l.action),
+    );
+  }
+
   @Get('compliance/audit-logs')
   async complianceAuditLogs(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
     return this.compliance.listAuditLogs(getAuth(req).orgId);
   }
 
-  @Get('compliance/export')
-  async complianceExport(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
+  @Post('compliance/account/cancel-deletion')
+  @RequireRoles('owner')
+  async cancelAccountDeletion(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
     const auth = getAuth(req);
-    return this.compliance.exportOrgData(auth.orgId, auth.userId);
+    return this.compliance.cancelPendingDeletion(auth.orgId, auth.userId);
   }
 
   @Delete('compliance/account')
   @RequireRoles('owner')
-  async complianceDeleteAccount(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
+  async complianceDeleteAccount(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Query('immediate') immediate?: string,
+    @Headers('x-step-up-token') stepUpToken?: string,
+  ) {
+    const { assertStepUp } = await import('../../common/step-up.util');
+    assertStepUp('account.delete', stepUpToken);
     const auth = getAuth(req);
-    return this.compliance.deleteAccount(auth.orgId, auth.userId);
+    return this.compliance.deleteAccount(auth.orgId, auth.userId, {
+      immediate: immediate === '1' || immediate === 'true',
+    });
   }
 }

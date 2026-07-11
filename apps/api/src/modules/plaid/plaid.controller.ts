@@ -2,8 +2,10 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Body,
   Param,
+  Query,
   Req,
   Headers,
   Inject,
@@ -14,12 +16,14 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { eq, and } from 'drizzle-orm';
 import type { Database } from '@pf/database';
-import { plaidItems } from '@pf/database';
+import { plaidItems, auditLogs } from '@pf/database';
+import { PLAID_STALE_MS } from '@pf/shared';
 import { AuthGuard, Public, getAuth, RequireRoles } from '../../common/auth.guard';
 import { PlaidService } from '../../services/core.services';
 import { DATABASE } from '../../database.module';
 import { LinkExchangeDto } from '../../dto';
 import { PlanLimitsGuard, RequirePlanLimit } from '../billing/plan-limits.guard';
+import { getDataQualityScorecard } from '@pf/sync';
 
 @ApiTags('plaid')
 @Controller()
@@ -58,10 +62,10 @@ export class PlaidController {
     return this.plaid.handleWebhook(body, verification);
   }
 
+  /** @deprecated Prefer GET /plaid/items — never returns access tokens */
   @Get('items')
-  async plaidItems(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
-    const auth = getAuth(req);
-    return this.db.select().from(plaidItems).where(eq(plaidItems.orgId, auth.orgId));
+  async plaidItemsLegacy(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
+    return this.listPlaidItems(req);
   }
 
   @Get('plaid/items')
@@ -75,9 +79,17 @@ export class PlaidController {
         lastSyncedAt: plaidItems.lastSyncedAt,
         loginRequired: plaidItems.loginRequired,
         errorCode: plaidItems.errorCode,
+        syncWarnings: plaidItems.syncWarnings,
+        consentExpiresAt: plaidItems.consentExpiresAt,
       })
       .from(plaidItems)
       .where(eq(plaidItems.orgId, auth.orgId));
+  }
+
+  @Get('plaid/data-quality')
+  async dataQuality(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
+    const auth = getAuth(req);
+    return getDataQualityScorecard(this.db, auth.orgId);
   }
 
   @Post('plaid/items/:id/sync')
@@ -85,6 +97,34 @@ export class PlaidController {
   async triggerSync(@Req() req: { auth?: ReturnType<typeof getAuth> }, @Param('id') id: string) {
     const auth = getAuth(req);
     return this.plaid.enqueueSync(id, auth.orgId);
+  }
+
+  @Delete('plaid/items/:id')
+  @RequireRoles('admin')
+  async disconnectItem(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Param('id') id: string,
+    @Query('wipeHistory') wipeHistory?: string,
+  ) {
+    const auth = getAuth(req);
+    const wipe = wipeHistory === '1' || wipeHistory === 'true';
+    const [item] = await this.db
+      .select({ id: plaidItems.id, institutionName: plaidItems.institutionName })
+      .from(plaidItems)
+      .where(and(eq(plaidItems.id, id), eq(plaidItems.orgId, auth.orgId)))
+      .limit(1);
+    if (!item) throw new NotFoundException('Plaid item not found');
+
+    await this.plaid.removePlaidItem(id, auth.orgId, { wipeHistory: wipe });
+    await this.db.insert(auditLogs).values({
+      orgId: auth.orgId,
+      userId: auth.userId,
+      action: 'plaid.disconnect',
+      entityType: 'plaid_item',
+      entityId: id,
+      metadataJson: { wipeHistory: wipe, institutionName: item.institutionName },
+    });
+    return { removed: true, wipeHistory: wipe };
   }
 
   @Get('plaid/items/:id/health')
@@ -98,6 +138,7 @@ export class PlaidController {
         lastSyncedAt: plaidItems.lastSyncedAt,
         loginRequired: plaidItems.loginRequired,
         errorCode: plaidItems.errorCode,
+        syncWarnings: plaidItems.syncWarnings,
         consentExpiresAt: plaidItems.consentExpiresAt,
         createdAt: plaidItems.createdAt,
       })
@@ -118,13 +159,14 @@ export class PlaidController {
       syncStatus: item.syncStatus,
       lastSyncedAt: item.lastSyncedAt,
       loginRequired: item.loginRequired,
+      syncWarnings: item.syncWarnings ?? [],
       error: item.errorCode
         ? { code: item.errorCode, message: item.errorCode }
         : null,
       consentExpiresAt: item.consentExpiresAt,
       healthy,
       stale: item.lastSyncedAt
-        ? Date.now() - item.lastSyncedAt.getTime() > 24 * 60 * 60 * 1000
+        ? Date.now() - item.lastSyncedAt.getTime() > PLAID_STALE_MS
         : true,
     };
   }

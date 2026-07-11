@@ -17,6 +17,7 @@ Confirm for user-facing surfaces touched in this PR:
 
 ## Test plan
 
-- [ ] Manual smoke of changed routes (desktop + mobile width)
-- [ ] `npm run test:e2e -w @pf/web` (or affected Playwright specs)
+- [ ] Manual smoke of changed routes (desktop + mobile width; bottom tabs + drawer on phone)
+- [ ] `npm run test:e2e -w @pf/web` (or affected Playwright specs — chromium + mobile projects)
 - [ ] Typecheck / lint for touched packages
+- [ ] If nav/shell changed: verify hub accordion + Search on mobile; no global context banner

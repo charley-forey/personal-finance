@@ -48,7 +48,7 @@ export function PageHeader({
             {backLabel ?? 'Back'}
           </Link>
         )}
-        <h1 className="text-2xl sm:text-3xl font-bold">{title}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
         {description && <p className="text-muted mt-1 sm:mt-2 text-sm sm:text-base">{description}</p>}
       </div>
       {actions && <div className="shrink-0">{actions}</div>}

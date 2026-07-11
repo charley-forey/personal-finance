@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import clsx from 'clsx';
+import { SegmentedControl } from '@/components/ui';
 
 export type TimeRange = '30d' | '90d' | 'ytd' | 'month';
 
@@ -76,27 +76,12 @@ export function TimeRangeSelect({ className }: { className?: string }) {
   const { range, setRange } = useTimeRange();
 
   return (
-    <div
-      role="group"
+    <SegmentedControl
       aria-label="Time range"
-      className={clsx('inline-flex items-center gap-1 rounded-lg border border-card-border p-0.5', className)}
-    >
-      {RANGES.map((r) => (
-        <button
-          key={r.value}
-          type="button"
-          onClick={() => setRange(r.value)}
-          aria-pressed={range === r.value}
-          className={clsx(
-            'min-h-8 rounded-md px-2.5 text-xs transition-colors',
-            range === r.value
-              ? 'bg-primary/15 text-primary font-medium'
-              : 'text-muted hover:text-foreground hover:bg-white/5',
-          )}
-        >
-          {r.label}
-        </button>
-      ))}
-    </div>
+      className={className}
+      options={RANGES}
+      value={range}
+      onChange={(v) => setRange(v as TimeRange)}
+    />
   );
 }

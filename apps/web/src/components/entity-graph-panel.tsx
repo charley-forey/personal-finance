@@ -1,5 +1,8 @@
 'use client';
 
+/**
+ * @deprecated Removed from global page chrome. Prefer page-local related links if needed.
+ */
 import Link from 'next/link';
 import { useState } from 'react';
 import { useGraphNeighbors, useGraphContext } from '@/hooks/use-finance';

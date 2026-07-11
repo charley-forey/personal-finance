@@ -75,7 +75,12 @@ export async function setCachedNarrative(
   ttlHours = 24,
 ) {
   const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
-  const existing = await getCachedNarrative(db, orgId, cacheKey);
+  const [existing] = await db
+    .select({ id: narrativeCache.id })
+    .from(narrativeCache)
+    .where(and(eq(narrativeCache.orgId, orgId), eq(narrativeCache.cacheKey, cacheKey)))
+    .limit(1);
+
   if (existing) {
     await db
       .update(narrativeCache)
@@ -83,6 +88,7 @@ export async function setCachedNarrative(
       .where(and(eq(narrativeCache.orgId, orgId), eq(narrativeCache.cacheKey, cacheKey)));
     return;
   }
+
   await db.insert(narrativeCache).values({ orgId, cacheKey, content, expiresAt });
 }
 
@@ -115,7 +121,11 @@ export async function buildSessionNarrative(db: Database, orgId: string): Promis
   }
 
   const content = parts.join(' ');
-  await setCachedNarrative(db, orgId, cacheKey, content, 4);
+  try {
+    await setCachedNarrative(db, orgId, cacheKey, content, 4);
+  } catch {
+    // Cache write must not fail the session narrative response.
+  }
 
   return {
     content,
@@ -164,7 +174,11 @@ export async function buildPageNarrative(db: Database, orgId: string, route: str
   }
   content += 'Review priority actions above to stay on track.';
 
-  await setCachedNarrative(db, orgId, cacheKey, content);
+  try {
+    await setCachedNarrative(db, orgId, cacheKey, content);
+  } catch {
+    // Cache write must not fail the page narrative response.
+  }
   return { content, cacheKey, links: [{ route: normalized, label: pageLabels[normalized] ?? 'Page' }] };
 }
 

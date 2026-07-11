@@ -26,7 +26,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-density="comfortable">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ServiceWorkerRegister />
         {children}

@@ -5,9 +5,11 @@ import { PieChart as PieChartIcon } from 'lucide-react';
 import { AppPageHeader, Card } from '@/components/ui';
 import { PageLoading } from '@/components/page-states';
 import { Badge, DataTable, EmptyState, Skeleton, StatCard } from '@/components/ui';
-import { useHoldings } from '@/hooks/use-finance';
+import { useHoldings, useAccounts } from '@/hooks/use-finance';
 import { useFormatCurrency } from '@/hooks/use-currency';
 import { api, type Holding } from '@/lib/api';
+import { PlaidLinkButton } from '@/components/plaid-link-button';
+import { purposeFromAccount } from '@pf/shared';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 const SLICE_COLORS = ['#22c55e', '#3b82f6', '#f59e0b'];
@@ -15,13 +17,16 @@ const SLICE_COLORS = ['#22c55e', '#3b82f6', '#f59e0b'];
 export default function InvestmentsPage() {
   const formatCurrency = useFormatCurrency();
   const { data: holdings, isLoading: holdingsLoading } = useHoldings();
+  const { data: accounts } = useAccounts();
+  const brokerageAccounts = (accounts ?? []).filter((a) => purposeFromAccount(a) === 'brokerage');
   const { data: allocation, isLoading: allocLoading } = useQuery({
     queryKey: ['portfolio-allocation'],
     queryFn: () => api.portfolioAllocation(),
   });
 
-  const total = allocation?.total ?? (holdings ?? []).reduce((s, h) => s + parseFloat(h.institutionValue ?? '0'), 0);
+  const total = allocation?.total ?? (holdings ?? []).reduce((s, h) => s + parseFloat(String(h.institutionValue ?? '0')), 0);
   const isLoading = holdingsLoading || allocLoading;
+  const emptyAction = <PlaidLinkButton />;
 
   const pieData = (allocation?.slices ?? []).map((s) => ({
     name: s.name,
@@ -31,7 +36,11 @@ export default function InvestmentsPage() {
 
   return (
     <div>
-      <AppPageHeader title="Investments" description="Portfolio holdings and allocation vs 60/25/15 target" />
+      <AppPageHeader
+        title="Investments"
+        description="Brokerage holdings and allocation vs 60/25/15 target"
+        actions={brokerageAccounts.length === 0 && (holdings?.length ?? 0) === 0 ? emptyAction : undefined}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2 mb-6">
         {isLoading ? (
@@ -93,6 +102,7 @@ export default function InvestmentsPage() {
               icon={PieChartIcon}
               title="No allocation data"
               description="Link an investment account to see portfolio allocation."
+              action={emptyAction}
             />
           )}
         </Card>
@@ -130,7 +140,8 @@ export default function InvestmentsPage() {
         <EmptyState
           icon={PieChartIcon}
           title="No holdings synced"
-          description="Link an investment account via Plaid to sync holdings and allocation."
+          description="Link an investment account via Plaid, or re-link with the investments product if accounts exist without holdings."
+          action={emptyAction}
         />
       )}
     </div>

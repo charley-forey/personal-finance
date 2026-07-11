@@ -1,6 +1,9 @@
+import { clearActAsSession, getActAsSession } from './act-as';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 let authToken: string | null = null;
+let handlingUnauthorized = false;
 
 export function setAuthToken(token: string) {
   authToken = token;
@@ -24,8 +27,20 @@ export function getAuthToken(): string | null {
   return null;
 }
 
+/** Clear session and send user to login once per unauthorized burst. */
+export function handleUnauthorized() {
+  if (typeof window === 'undefined') return;
+  if (handlingUnauthorized) return;
+  handlingUnauthorized = true;
+  clearAuthToken();
+  clearActAsSession();
+  const next = encodeURIComponent(window.location.pathname + window.location.search);
+  window.location.assign(`/login?next=${next}`);
+}
+
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getAuthToken();
+  const actAs = getActAsSession();
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
@@ -33,6 +48,12 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(actAs
+          ? {
+              'X-Act-As-Org': actAs.orgId,
+              'X-Act-As-Session': actAs.sessionId,
+            }
+          : {}),
         ...options.headers,
       },
     });
@@ -40,6 +61,11 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     throw new Error(
       `Cannot reach API at ${API_URL}. Start it with: npm run dev:api`,
     );
+  }
+
+  if (res.status === 401) {
+    handleUnauthorized();
+    throw new Error('Session expired — please sign in again');
   }
 
   if (!res.ok) {
@@ -57,8 +83,19 @@ export const api = {
     apiFetch<unknown>('/plaid/link/exchange', { method: 'POST', body: JSON.stringify({ publicToken }) }),
   plaidItems: () => apiFetch<PlaidItem[]>('/plaid/items'),
   triggerSync: (itemId: string) =>
-    apiFetch<unknown>(`/plaid/items/${itemId}/sync`, { method: 'POST', body: '{}' }),
+    apiFetch<{ queued: boolean; itemId: string; syncStatus?: string }>(`/plaid/items/${itemId}/sync`, {
+      method: 'POST',
+      body: '{}',
+    }),
+  dataQuality: () => apiFetch<DataQualityScorecard>('/plaid/data-quality'),
   accounts: () => apiFetch<Account[]>('/accounts'),
+  updateAccount: (id: string, data: { displayName?: string; purpose?: string; isHidden?: boolean }) =>
+    apiFetch<Account>(`/accounts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  accountBalances: (id: string, limit = 90) =>
+    apiFetch<Array<{ current?: string; capturedAt: string; syncJobId?: string }>>(
+      `/accounts/${id}/balances?limit=${limit}`,
+    ),
+  recentChanges: () => apiFetch<ActivityEvent[]>('/activity/recent-changes'),
   transactions: (limit = 50, search?: string) =>
     apiFetch<Transaction[]>(`/transactions?limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ''}`),
   updateTransaction: (id: string, data: { categoryId?: string; notes?: string }) =>
@@ -74,6 +111,8 @@ export const api = {
     apiFetch<Budget>('/budgets', { method: 'POST', body: JSON.stringify(data) }),
   budgetActuals: () => apiFetch<BudgetActual[]>('/budgets/actuals'),
   holdings: () => apiFetch<Holding[]>('/investments/holdings'),
+  investmentTransactions: (limit = 50) =>
+    apiFetch<Array<Record<string, unknown>>>(`/investments/transactions?limit=${limit}`),
   liabilities: () => apiFetch<Liability[]>('/liabilities'),
   recurring: () => apiFetch<RecurringStream[]>('/recurring'),
   goals: () => apiFetch<Goal[]>('/goals'),
@@ -195,7 +234,35 @@ export const api = {
   households: () => apiFetch<unknown[]>('/households'),
   auditLogs: () => apiFetch<AuditLog[]>('/compliance/audit-logs'),
   exportData: () => apiFetch<GdprExport>('/compliance/export'),
-  deleteAccount: () => apiFetch<{ deleted: boolean; plaidItemsRemoved: number }>('/compliance/account', { method: 'DELETE' }),
+  deleteAccount: (immediate = false) =>
+    apiFetch<{
+      deleted: boolean;
+      pendingDeletion?: boolean;
+      deletionScheduledAt?: string;
+      plaidItemsRemoved: number;
+    }>(`/compliance/account${immediate ? '?immediate=1' : ''}`, { method: 'DELETE' }),
+  cancelAccountDeletion: () =>
+    apiFetch<{ cancelled: boolean }>('/compliance/account/cancel-deletion', { method: 'POST', body: '{}' }),
+  removePlaidItem: (id: string, wipeHistory = false) =>
+    apiFetch<{ removed: boolean; wipeHistory: boolean }>(`/plaid/items/${id}?wipeHistory=${wipeHistory ? '1' : '0'}`, {
+      method: 'DELETE',
+    }),
+  orgMembers: () => apiFetch<OrgMember[]>('/org/members'),
+  inviteOrgMember: (email: string, role: 'admin' | 'viewer' | 'owner') =>
+    apiFetch<OrgMember>('/org/invites', { method: 'POST', body: JSON.stringify({ email, role }) }),
+  updateOrgMemberRole: (userId: string, role: 'admin' | 'viewer' | 'owner') =>
+    apiFetch<OrgMember>(`/org/members/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  removeOrgMember: (userId: string) =>
+    apiFetch<{ removed: boolean }>(`/org/members/${userId}`, { method: 'DELETE' }),
+  myOrganizations: () => apiFetch<OrgMembership[]>('/org/memberships'),
+  switchOrganization: (orgId: string) =>
+    apiFetch<{ orgId: string; role: string }>('/org/switch', { method: 'POST', body: JSON.stringify({ orgId }) }),
+  securityEvents: () => apiFetch<SecurityEvent[]>('/security/events'),
+  listConsents: () => apiFetch<ConsentRecord[]>('/consents'),
+  updateConsent: (purpose: string, granted: boolean) =>
+    apiFetch<ConsentRecord>('/consents', { method: 'POST', body: JSON.stringify({ purpose, granted }) }),
+  dataCatalog: () => apiFetch<DataCatalogCategory[]>('/privacy/data-catalog'),
+  revokeApiKey: (id: string) => apiFetch<{ revoked: boolean }>(`/api-keys/${id}`, { method: 'DELETE' }),
 };
 
 export interface AgentConversation {
@@ -208,11 +275,34 @@ export interface AgentConversation {
 export interface Account {
   id: string;
   name: string;
+  displayName?: string;
   type: string;
   subtype?: string;
+  purpose?: string;
+  purposeOverride?: boolean;
   mask?: string;
   currency: string;
   itemId?: string;
+  isHidden?: boolean;
+  currentBalance?: string | null;
+  availableBalance?: string | null;
+  balanceCapturedAt?: string | null;
+  balanceSyncJobId?: string | null;
+}
+
+export interface DataQualityScorecard {
+  totalAccounts: number;
+  visibleAccounts: number;
+  healthyItems: number;
+  totalItems: number;
+  staleItems: number;
+  loginRequiredItems: number;
+  errorItems: number;
+  itemsWithWarnings: number;
+  accountsByPurpose: Record<string, number>;
+  holdingsCoverage: { investmentAccounts: number; withHoldings: number };
+  score: number;
+  issues: string[];
 }
 
 export interface PlaidItem {
@@ -222,6 +312,8 @@ export interface PlaidItem {
   lastSyncedAt?: string;
   loginRequired: boolean;
   errorCode?: string;
+  syncWarnings?: string[];
+  consentExpiresAt?: string;
 }
 
 export interface Transaction {
@@ -260,6 +352,7 @@ export interface NetWorth {
   netWorth: number;
   cash?: number;
   investments?: number;
+  retirement?: number;
   creditDebt?: number;
 }
 
@@ -487,6 +580,7 @@ export interface NotificationSettings {
 }
 
 export interface BillingPlan {
+  orgId?: string;
   tier: string;
   limits: { banks: number; aiChatsPerDay: number; historyDays: number; documents?: number };
   aiMessagesLimit: number | null;
@@ -572,6 +666,43 @@ export interface GdprExport {
   accounts: unknown[];
   transactions: unknown[];
   auditLogs: AuditLog[];
+}
+
+export interface OrgMember {
+  userId: string;
+  email: string;
+  name?: string | null;
+  role: 'owner' | 'admin' | 'viewer';
+  joinedAt: string;
+}
+
+export interface OrgMembership {
+  orgId: string;
+  orgName: string;
+  role: 'owner' | 'admin' | 'viewer';
+  isCurrent: boolean;
+}
+
+export interface SecurityEvent {
+  id: string;
+  action: string;
+  createdAt: string;
+  metadataJson?: Record<string, unknown>;
+}
+
+export interface ConsentRecord {
+  purpose: string;
+  version: string;
+  granted: boolean;
+  grantedAt?: string | null;
+  revokedAt?: string | null;
+}
+
+export interface DataCatalogCategory {
+  key: string;
+  label: string;
+  description: string;
+  retainedUntil: string;
 }
 
 export interface ContextItem {

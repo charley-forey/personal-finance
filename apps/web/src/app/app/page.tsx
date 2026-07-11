@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useMemo, useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Inbox, ListChecks, Wallet, X } from 'lucide-react';
 import { PageHeader, Card } from '@/components/ui';
 import { StatCardWithExplain } from '@/components/stat-card-with-explain';
@@ -20,7 +21,7 @@ import {
   useRecurring,
 } from '@/hooks/use-finance';
 import { useFormatCurrency } from '@/hooks/use-currency';
-import { type Liability, type RecurringStream } from '@/lib/api';
+import { api, type Liability, type RecurringStream } from '@/lib/api';
 
 const SETUP_DISMISS_KEY = 'pf_setup_dismissed';
 const HealthScoreRadar = dynamic(
@@ -58,6 +59,32 @@ const WeeklyDigestPreview = dynamic(
   () => import('@/components/weekly-digest-preview').then((m) => m.WeeklyDigestPreview),
   { ssr: false, loading: () => <Skeleton className="h-40 w-full" /> },
 );
+
+function SinceLastVisit() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['recent-changes'],
+    queryFn: () => api.recentChanges(),
+  });
+  if (isLoading) return <Skeleton className="h-24 w-full mb-4" />;
+  if (!data?.length) return null;
+  return (
+    <Card title="Since last visit" className="mb-4">
+      <ul className="space-y-2 text-sm">
+        {data.slice(0, 8).map((c) => (
+          <li key={c.id} className="flex justify-between gap-2 text-muted">
+            <span>
+              {c.entityType}
+              {c.fieldName ? ` · ${c.fieldName}` : ''}
+            </span>
+            <span className="tabular-nums text-xs">
+              {c.detectedAt ? new Date(c.detectedAt).toLocaleString() : c.changeSource}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
 
 interface UpcomingBill {
   id: string;
@@ -266,6 +293,8 @@ export default function DashboardPage() {
       <Card title="Your Action Queue" className="mb-4">
         <ActionQueue />
       </Card>
+
+      <SinceLastVisit />
 
       <WeeklyDigestPreview />
 

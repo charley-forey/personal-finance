@@ -12,9 +12,18 @@ const DISMISS_KEY = 'pf-pwa-install-dismissed';
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+function isIosSafari() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  const iOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = 'standalone' in navigator && Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
+  return iOS && !standalone;
+}
+
 export function PwaInstallPrompt() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
+  const [iosHint, setIosHint] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
@@ -29,7 +38,19 @@ export function PwaInstallPrompt() {
     };
 
     window.addEventListener('beforeinstallprompt', onBip);
-    return () => window.removeEventListener('beforeinstallprompt', onBip);
+
+    // iOS has no BIP — show Add to Home Screen instructions after a short delay
+    const t = window.setTimeout(() => {
+      if (!window.matchMedia('(display-mode: standalone)').matches && isIosSafari()) {
+        setIosHint(true);
+        setVisible(true);
+      }
+    }, 2500);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBip);
+      window.clearTimeout(t);
+    };
   }, []);
 
   useEffect(() => {
@@ -75,11 +96,13 @@ export function PwaInstallPrompt() {
     localStorage.setItem(DISMISS_KEY, '1');
     setVisible(false);
     setDeferred(null);
+    setIosHint(false);
   };
 
-  if (!visible || !deferred) return null;
+  if (!visible || (!deferred && !iosHint)) return null;
 
   const install = async () => {
+    if (!deferred) return;
     await deferred.prompt();
     const choice = await deferred.userChoice;
     if (choice.outcome === 'accepted' || choice.outcome === 'dismissed') {
@@ -98,15 +121,19 @@ export function PwaInstallPrompt() {
     >
       <p className="text-sm font-medium">Install Finance OS</p>
       <p className="mt-1 text-xs text-muted">
-        Add to your home screen for faster access and an offline shell.
+        {iosHint
+          ? 'On iPhone: tap Share, then Add to Home Screen for faster access and an offline shell.'
+          : 'Add to your home screen for faster access and an offline shell.'}
       </p>
       <div className="mt-3 flex gap-2 justify-end">
         <Button size="sm" variant="ghost" onClick={dismiss}>
           Not now
         </Button>
-        <Button size="sm" onClick={() => void install()}>
-          Install
-        </Button>
+        {deferred && (
+          <Button size="sm" onClick={() => void install()}>
+            Install
+          </Button>
+        )}
       </div>
     </div>
   );

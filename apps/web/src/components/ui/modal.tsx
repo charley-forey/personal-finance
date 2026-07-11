@@ -72,7 +72,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
@@ -85,11 +85,11 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
         className={clsx(
-          'relative z-10 w-full max-w-lg rounded-xl border border-card-border bg-card p-6 shadow-xl outline-none',
+          'relative z-10 flex w-full max-h-[90dvh] flex-col rounded-t-xl border border-card-border bg-card p-6 shadow-xl outline-none sm:max-w-lg sm:rounded-xl',
           className,
         )}
       >
-        <div className="mb-4 flex items-start justify-between gap-4">
+        <div className="mb-4 flex shrink-0 items-start justify-between gap-4">
           {title && (
             <h2 id={titleId} className="text-lg font-semibold text-foreground">
               {title}
@@ -100,14 +100,14 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
             onClick={onClose}
             aria-label="Close dialog"
             className={clsx(
-              'rounded-lg p-1.5 text-muted transition-colors hover:bg-white/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+              'inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-muted transition-colors hover:bg-white/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
               !title && 'ml-auto',
             )}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
-        {children}
+        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
       </div>
     </div>
   );

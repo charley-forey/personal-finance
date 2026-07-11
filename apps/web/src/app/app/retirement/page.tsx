@@ -5,16 +5,26 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } f
 import { Landmark } from 'lucide-react';
 import { AppPageHeader, Button, Card, Input, ProvenanceChip } from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
-import { PageContextBanner } from '@/components/page-context-banner';
-import { EmptyState, Skeleton } from '@/components/ui';
+import { EmptyState, Skeleton, Badge } from '@/components/ui';
 import { StatCardWithExplain } from '@/components/stat-card-with-explain';
-import { api } from '@/lib/api';
+import { PlaidLinkButton } from '@/components/plaid-link-button';
+import { api, formatCurrency } from '@/lib/api';
+import { useAccounts, useNetWorth } from '@/hooks/use-finance';
+import { purposeFromAccount } from '@pf/shared';
 
 export default function RetirementPage() {
+  const { data: accounts } = useAccounts();
+  const { data: nw } = useNetWorth();
+  const retirementAccounts = (accounts ?? []).filter((a) => purposeFromAccount(a) === 'retirement');
+  const retirementBalance =
+    nw?.current?.retirement ??
+    retirementAccounts.reduce((s, a) => s + parseFloat(a.currentBalance ?? '0'), 0);
+
   const [years, setYears] = useState('30');
   const [expectedReturn, setExpectedReturn] = useState('7');
   const [monthlyContribution, setMonthlyContribution] = useState('2000');
   const [monthlyWithdrawal, setMonthlyWithdrawal] = useState('5000');
+  const [startingBalance, setStartingBalance] = useState('');
   const [result, setResult] = useState<{
     result?: {
       successRate: number;
@@ -24,6 +34,15 @@ export default function RetirementPage() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [seeded, setSeeded] = useState(false);
+
+  useEffect(() => {
+    if (seeded) return;
+    if (retirementBalance > 0) {
+      setStartingBalance(String(Math.round(retirementBalance)));
+      setSeeded(true);
+    }
+  }, [retirementBalance, seeded]);
 
   const runSimulation = useCallback(async () => {
     setLoading(true);
@@ -35,6 +54,7 @@ export default function RetirementPage() {
         expectedReturn: (parseFloat(expectedReturn) || 7) / 100,
         monthlyContribution: parseFloat(monthlyContribution) || 0,
         monthlyWithdrawal: parseFloat(monthlyWithdrawal) || 0,
+        startingBalance: parseFloat(startingBalance) || retirementBalance || 0,
       });
       setResult(r as typeof result);
     } catch (err) {
@@ -42,7 +62,7 @@ export default function RetirementPage() {
     } finally {
       setLoading(false);
     }
-  }, [years, expectedReturn, monthlyContribution, monthlyWithdrawal]);
+  }, [years, expectedReturn, monthlyContribution, monthlyWithdrawal, startingBalance, retirementBalance]);
 
   useEffect(() => {
     void runSimulation();
@@ -61,21 +81,65 @@ export default function RetirementPage() {
   const provenance = (
     <ProvenanceChip
       source="Monte Carlo"
-      detail={`${years}y · ${expectedReturn}% return`}
+      detail={`${years}y · ${expectedReturn}% return · seeded from linked retirement`}
       methodologyHref="/app/library"
     />
   );
 
   return (
     <div>
-      <AppPageHeader title="Retirement" description="Monte Carlo simulation with percentile bands" />
+      <AppPageHeader
+        title="Retirement"
+        description="Linked retirement accounts and Monte Carlo projections"
+        actions={retirementAccounts.length === 0 ? <PlaidLinkButton /> : undefined}
+      />
 
-      <div className="mb-4">
-        <PageContextBanner />
-      </div>
+      <section className="mb-8">
+        <h2 className="mb-4 text-sm font-medium text-muted uppercase tracking-wide">Linked retirement accounts</h2>
+        {retirementAccounts.length === 0 ? (
+          <EmptyState
+            icon={Landmark}
+            title="No retirement accounts linked"
+            description="Link a 401(k), IRA, or similar account via Plaid. Re-link older connections with the investments product if holdings are missing."
+            action={<PlaidLinkButton />}
+          />
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-4">
+            {retirementAccounts.map((acct) => (
+              <Card key={acct.id}>
+                <div className="flex justify-between gap-2">
+                  <div>
+                    <h3 className="font-semibold">{acct.displayName ?? acct.name}</h3>
+                    <p className="text-sm text-muted capitalize">{acct.subtype ?? acct.type}</p>
+                  </div>
+                  <Badge variant="success">Retirement</Badge>
+                </div>
+                {acct.currentBalance != null && (
+                  <p className="mt-2 text-lg tabular-nums font-medium">{formatCurrency(acct.currentBalance)}</p>
+                )}
+              </Card>
+            ))}
+          </div>
+        )}
+        {retirementBalance > 0 && (
+          <StatCardWithExplain
+            title="Retirement balances"
+            value={formatCurrency(retirementBalance)}
+            provenance={
+              <ProvenanceChip source="Linked accounts" detail="Purpose = retirement" href="/app/accounts" />
+            }
+          />
+        )}
+      </section>
 
       <Card title="Assumptions" className="mb-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Input
+            label="Starting balance"
+            type="number"
+            value={startingBalance}
+            onChange={(e) => setStartingBalance(e.target.value)}
+          />
           <Input
             label="Horizon (years)"
             type="number"

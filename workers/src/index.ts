@@ -1,8 +1,9 @@
 import { config as loadEnv } from 'dotenv';
 import { resolve } from 'path';
-import { createWorkers, createPlaidSyncHandler, rollupQueue, insightsQueue, notificationsQueue } from './queues.js';
+import { createWorkers, createPlaidSyncHandler, rollupQueue, insightsQueue, notificationsQueue, plaidSyncQueue } from './queues.js';
 import { createDb } from '@pf/database';
-import { organizations } from '@pf/database';
+import { organizations, plaidItems } from '@pf/database';
+import { PLAID_STALE_MS } from '@pf/shared';
 import {
   computeDailySnapshot,
   computeBudgetActuals,
@@ -29,6 +30,7 @@ createWorkers({
     await processDomainEvents(db);
     const { computeFeatureStore } = await import('@pf/intelligence');
     await computeFeatureStore(db, job.data.orgId);
+    await enqueueStalePlaidSyncs();
   },
   onInsight: async (job) => {
     console.log(`Generate insights for org ${job.data.orgId}`);
@@ -84,6 +86,21 @@ async function scheduleDailyJobs() {
   }
 }
 
+async function enqueueStalePlaidSyncs() {
+  if (process.env.PLAID_SYNC_ENABLED === 'false') return;
+  const items = await db.select().from(plaidItems);
+  for (const item of items) {
+    const stale = !item.lastSyncedAt || Date.now() - item.lastSyncedAt.getTime() > PLAID_STALE_MS;
+    if (stale && !item.loginRequired) {
+      await plaidSyncQueue.add(
+        'sync',
+        { itemId: item.id, orgId: item.orgId },
+        { jobId: `proactive-${item.id}-${new Date().toISOString().slice(0, 13)}` },
+      );
+    }
+  }
+}
+
 async function seedKnowledge() {
   const contentDir = resolve(process.cwd(), '../content/knowledge');
   const apiKey = process.env.OPENAI_API_KEY;
@@ -96,6 +113,7 @@ async function seedKnowledge() {
 }
 
 scheduleDailyJobs().catch(console.error);
+enqueueStalePlaidSyncs().catch(console.error);
 seedKnowledge().catch(console.error);
 
 console.log('Workers ready');

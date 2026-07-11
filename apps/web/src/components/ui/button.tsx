@@ -9,7 +9,7 @@ const variants = {
 } as const;
 
 const sizes = {
-  sm: 'h-8 px-3 text-xs rounded-md gap-1.5',
+  sm: 'h-8 min-h-8 px-3 text-xs rounded-lg gap-1.5 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-h-11',
   md: 'h-10 px-4 text-sm rounded-lg gap-2',
   lg: 'h-12 px-6 text-base rounded-lg gap-2',
 } as const;

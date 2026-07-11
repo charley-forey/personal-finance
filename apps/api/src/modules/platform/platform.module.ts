@@ -14,10 +14,14 @@ import {
   AdvisorService,
   HouseholdService,
   ComplianceService,
+  OrgMembersService,
+  ConsentService,
 } from '../../services/platform.services';
 import { PlatformAdminGuard } from '../../common/platform-admin.guard';
 import { PlatformController } from './platform.controller';
 import { StorageService } from '../../services/storage.service';
+import { RetentionSweeperService } from '../../services/retention-sweeper.service';
+import { AuthAnomalyService } from '../../services/auth-anomaly.service';
 
 @Module({
   imports: [DatabaseModule, AnalyticsModule, PlaidModule, BillingModule],
@@ -32,10 +36,14 @@ import { StorageService } from '../../services/storage.service';
     AdvisorService,
     HouseholdService,
     ComplianceService,
+    OrgMembersService,
+    ConsentService,
     CategoryService,
     PlatformAdminGuard,
     StorageService,
+    RetentionSweeperService,
+    AuthAnomalyService,
   ],
-  exports: [ComplianceService],
+  exports: [ComplianceService, OrgMembersService, ConsentService, RetentionSweeperService, AuthAnomalyService],
 })
 export class PlatformModule {}

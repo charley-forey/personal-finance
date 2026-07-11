@@ -12,7 +12,7 @@ const STEPS = [
   },
   {
     title: 'Find anything fast',
-    body: 'Press ⌘K (or Ctrl+K) to jump to pages and common actions.',
+    body: 'Search from the sidebar (⌘K / Ctrl+K) or the Search button on mobile to jump to pages and actions.',
   },
   {
     title: 'Inbox & hubs',

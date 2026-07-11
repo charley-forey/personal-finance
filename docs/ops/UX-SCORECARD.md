@@ -22,14 +22,15 @@ Every Monday (or first business day), 15 minutes. Owner: product + eng on-call.
 ## Checklist
 
 - [ ] Spot-check Command home: Action Queue, Weekly digest preview, inbox badge
-- [ ] Spot-check ⌘K: Pages / Actions / Recent sections, focus trap, Esc
-- [ ] Mobile More drawer: Money / Plan / Long-term / Setup section headers
-- [ ] Leaf pages: breadcrumbs + PageContextBanner related links (transactions, budgets, net-worth, retirement)
+- [ ] Spot-check ⌘K / mobile Search: Pages / Actions / Recent, focus trap, Esc
+- [ ] Mobile drawer: hub accordions (same IA as desktop) — no MORE_SECTIONS duplicate
+- [ ] Leaf pages: breadcrumbs only (no global PageContextBanner / Connected panel)
 - [ ] Transactions saved views: All / Uncategorized / This month / Large
-- [ ] Time range selector syncs `?range=` in URL
+- [ ] Time range selector syncs `?range=` in URL (SegmentedControl)
 - [ ] Demo mode + privacy blur toggles in Settings
-- [ ] Design-system + journey e2e smoke green in CI
+- [ ] Design-system catalog green + nav-elevation e2e (desktop + mobile projects)
 - [ ] Note any a11y regressions (axe when `@axe-core/playwright` is added)
+- [ ] Catalog includes Modal, Sheet, Tabs, Tooltip, Switch, DataTable mobile cards
 
 ## Ritual
 

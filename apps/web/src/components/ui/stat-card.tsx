@@ -14,8 +14,8 @@ export interface StatCardProps {
 }
 
 const trendStyles = {
-  up: 'text-emerald-400',
-  down: 'text-red-400',
+  up: 'text-success',
+  down: 'text-danger',
   neutral: 'text-muted',
 } as const;
 

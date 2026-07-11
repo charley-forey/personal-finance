@@ -3,8 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useAuth, useAccessToken } from '@workos-inc/authkit-nextjs/components';
 import { useRouter } from 'next/navigation';
-import { setAuthToken } from '@/lib/api';
+import { clearAuthToken, setAuthToken } from '@/lib/api';
 
+/**
+ * AuthKit access token is the source of truth. localStorage `pf_token` is a
+ * short-lived cache refreshed whenever AuthKit provides a new token.
+ */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -13,11 +17,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    let refreshTimer: ReturnType<typeof setInterval> | undefined;
 
     async function sync() {
       if (authLoading || tokenLoading) return;
 
       if (!user) {
+        clearAuthToken();
         router.replace('/login');
         return;
       }
@@ -28,9 +34,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setReady(true);
     }
 
-    sync();
+    void sync();
+    // Refresh cache periodically so orphaned localStorage tokens do not linger.
+    refreshTimer = setInterval(() => {
+      void sync();
+    }, 4 * 60 * 1000);
+
     return () => {
       cancelled = true;
+      if (refreshTimer) clearInterval(refreshTimer);
     };
   }, [user, authLoading, tokenLoading, getAccessToken, router]);
 

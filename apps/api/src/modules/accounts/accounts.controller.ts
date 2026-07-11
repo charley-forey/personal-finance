@@ -2,10 +2,11 @@ import { Controller, Get, Patch, Body, Param, Query, Req, Inject, NotFoundExcept
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { eq, desc, and, or, ilike } from 'drizzle-orm';
 import type { Database } from '@pf/database';
-import { accounts, transactions } from '@pf/database';
-import { AuthGuard, getAuth, RequireRoles } from '../../common/auth.guard';
+import { accounts, accountBalances, transactions } from '@pf/database';
+import { purposeFromAccount } from '@pf/shared';
+import { getAuth, RequireRoles } from '../../common/auth.guard';
 import { DATABASE } from '../../database.module';
-import { UpdateTransactionDto } from '../../dto';
+import { UpdateTransactionDto, UpdateAccountDto } from '../../dto';
 import { CategoryService } from '../../services/category.service';
 
 @ApiTags('accounts')
@@ -18,9 +19,35 @@ export class AccountsController {
   ) {}
 
   @Get('accounts')
-  async listAccounts(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
+  async listAccounts(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Query('includeHidden') includeHidden?: string,
+  ) {
     const auth = getAuth(req);
-    return this.db.select().from(accounts).where(eq(accounts.orgId, auth.orgId));
+    const rows = await this.db.select().from(accounts).where(eq(accounts.orgId, auth.orgId));
+    const filtered = includeHidden === 'true' ? rows : rows.filter((a) => !a.isHidden);
+
+    const withBalances = await Promise.all(
+      filtered.map(async (acct) => {
+        const [balance] = await this.db
+          .select()
+          .from(accountBalances)
+          .where(eq(accountBalances.accountId, acct.id))
+          .orderBy(desc(accountBalances.capturedAt))
+          .limit(1);
+        const purpose = purposeFromAccount(acct);
+        return {
+          ...acct,
+          purpose,
+          displayName: acct.displayName ?? acct.name,
+          currentBalance: balance?.current ?? null,
+          availableBalance: balance?.available ?? null,
+          balanceCapturedAt: balance?.capturedAt ?? null,
+          balanceSyncJobId: balance?.syncJobId ?? null,
+        };
+      }),
+    );
+    return withBalances;
   }
 
   @Get('accounts/:id')
@@ -31,7 +58,62 @@ export class AccountsController {
       .from(accounts)
       .where(and(eq(accounts.id, id), eq(accounts.orgId, auth.orgId)))
       .limit(1);
-    return account;
+    if (!account) throw new NotFoundException('Account not found');
+    return { ...account, purpose: purposeFromAccount(account) };
+  }
+
+  @Get('accounts/:id/balances')
+  async accountBalanceHistory(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Param('id') id: string,
+    @Query('limit') limit = '90',
+  ) {
+    const auth = getAuth(req);
+    const [account] = await this.db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.id, id), eq(accounts.orgId, auth.orgId)))
+      .limit(1);
+    if (!account) throw new NotFoundException('Account not found');
+
+    return this.db
+      .select()
+      .from(accountBalances)
+      .where(eq(accountBalances.accountId, id))
+      .orderBy(desc(accountBalances.capturedAt))
+      .limit(parseInt(limit, 10) || 90);
+  }
+
+  @Patch('accounts/:id')
+  @RequireRoles('admin')
+  async updateAccount(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Param('id') id: string,
+    @Body() body: UpdateAccountDto,
+  ) {
+    const auth = getAuth(req);
+    const [existing] = await this.db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.id, id), eq(accounts.orgId, auth.orgId)))
+      .limit(1);
+    if (!existing) throw new NotFoundException('Account not found');
+
+    const patch: Partial<typeof accounts.$inferInsert> = {};
+    if (body.displayName !== undefined) patch.displayName = body.displayName;
+    if (body.isHidden !== undefined) patch.isHidden = body.isHidden;
+    if (body.purpose !== undefined) {
+      patch.purpose = body.purpose;
+      patch.purposeOverride = true;
+    }
+
+    const [updated] = await this.db
+      .update(accounts)
+      .set(patch)
+      .where(and(eq(accounts.id, id), eq(accounts.orgId, auth.orgId)))
+      .returning();
+
+    return { ...updated, purpose: purposeFromAccount(updated!) };
   }
 
   @Get('transactions')

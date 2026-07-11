@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { PiggyBank } from 'lucide-react';
 import { AppPageHeader, Card } from '@/components/ui';
 import { PageLoading } from '@/components/page-states';
-import { PageContextBanner } from '@/components/page-context-banner';
 import { Button, EmptyState, Input, ProvenanceChip, Select } from '@/components/ui';
 import { StatCardWithExplain } from '@/components/stat-card-with-explain';
 import { useBudgets, useBudgetActuals, useCategories } from '@/hooks/use-finance';
@@ -91,10 +90,6 @@ export default function BudgetsPage() {
           ) : undefined
         }
       />
-
-      <div className="mb-4">
-        <PageContextBanner />
-      </div>
 
       {isLoading && <PageLoading variant="list" count={3} className="mb-6" />}
 

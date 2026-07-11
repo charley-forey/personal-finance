@@ -1,13 +1,25 @@
-import { createCipheriv, createDecipheriv, scryptSync } from 'crypto';
+import { createDecipheriv, scryptSync } from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
-const SALT = process.env.TOKEN_ENCRYPTION_SALT ?? 'pf-token-salt-v1';
+const DEFAULT_DEV_SALT = 'pf-token-salt-v1';
+
+function resolveSalt(): string {
+  const salt = process.env.TOKEN_ENCRYPTION_SALT;
+  if (salt?.trim()) return salt;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('TOKEN_ENCRYPTION_SALT must be set in production');
+  }
+  return DEFAULT_DEV_SALT;
+}
 
 function deriveKey(key: string): Buffer {
-  return scryptSync(key, SALT, 32);
+  return scryptSync(key, resolveSalt(), 32);
 }
 
 export function decryptToken(ciphertext: string, key: string): string {
+  if (ciphertext === 'revoked') {
+    throw new Error('Plaid access token has been revoked');
+  }
   const [ivHex, authTagHex, encryptedHex] = ciphertext.split(':');
   const iv = Buffer.from(ivHex!, 'hex');
   const authTag = Buffer.from(authTagHex!, 'hex');

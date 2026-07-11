@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Download, Tag, Undo2 } from 'lucide-react';
 import { AppPageHeader, Card } from '@/components/ui';
 import { PageError } from '@/components/page-states';
-import { PageContextBanner } from '@/components/page-context-banner';
 import { Button, DataTable, EmptyState, Input, Select, Skeleton } from '@/components/ui';
 import type { DataTableColumn } from '@/components/ui';
 import { useCategories, useTransactionsSearch } from '@/hooks/use-finance';
@@ -266,10 +265,6 @@ export default function TransactionsPage() {
           </Button>
         }
       />
-
-      <div className="mb-4">
-        <PageContextBanner />
-      </div>
 
       <div
         role="group"

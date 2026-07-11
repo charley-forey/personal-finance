@@ -29,6 +29,7 @@ export function ActionQueue() {
       const wasDismiss = variables.outcome === 'dismissed';
       toast.show({
         message: wasDismiss ? 'Action dismissed' : 'Action marked done',
+        durationMs: 30_000,
         undo: () => {
           void api
             .recommendationOutcome(variables.id, 'pending')

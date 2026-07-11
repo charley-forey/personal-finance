@@ -28,6 +28,8 @@ export const plaidItems = pgTable(
     errorCode: text('error_code'),
     loginRequired: boolean('login_required').default(false).notNull(),
     webhookUrl: text('webhook_url'),
+    syncWarnings: jsonb('sync_warnings').$type<string[]>().default([]),
+    lastSyncJobId: text('last_sync_job_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
@@ -63,6 +65,10 @@ export const accounts = pgTable(
     mask: text('mask'),
     currency: text('currency').default('USD').notNull(),
     isHidden: boolean('is_hidden').default(false).notNull(),
+    displayName: text('display_name'),
+    /** Derived or user-set: cash | brokerage | retirement | liability | other */
+    purpose: text('purpose'),
+    purposeOverride: boolean('purpose_override').default(false).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
@@ -80,6 +86,7 @@ export const accountBalances = pgTable(
     current: numeric('current', { precision: 18, scale: 2 }),
     limitAmount: numeric('limit_amount', { precision: 18, scale: 2 }),
     isoCurrencyCode: text('iso_currency_code').default('USD'),
+    syncJobId: text('sync_job_id'),
     capturedAt: timestamp('captured_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [index('balance_account_captured_idx').on(t.accountId, t.capturedAt)],
@@ -117,53 +124,80 @@ export const transactions = pgTable(
   ],
 );
 
-export const investmentSecurities = pgTable('investment_securities', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  ticker: text('ticker'),
-  name: text('name'),
-  type: text('type'),
-  cusip: text('cusip'),
-  isin: text('isin'),
-  closePrice: numeric('close_price', { precision: 18, scale: 4 }),
-  closePriceAsOf: date('close_price_as_of'),
-});
+export const investmentSecurities = pgTable(
+  'investment_securities',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    plaidSecurityId: text('plaid_security_id'),
+    ticker: text('ticker'),
+    name: text('name'),
+    type: text('type'),
+    cusip: text('cusip'),
+    isin: text('isin'),
+    closePrice: numeric('close_price', { precision: 18, scale: 4 }),
+    closePriceAsOf: date('close_price_as_of'),
+  },
+  (t) => [uniqueIndex('investment_securities_plaid_id_idx').on(t.plaidSecurityId)],
+);
 
-export const investmentHoldings = pgTable('investment_holdings', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
-  accountId: uuid('account_id').references(() => accounts.id, { onDelete: 'cascade' }).notNull(),
-  securityId: uuid('security_id').references(() => investmentSecurities.id),
-  quantity: numeric('quantity', { precision: 18, scale: 6 }),
-  costBasis: numeric('cost_basis', { precision: 18, scale: 2 }),
-  institutionPrice: numeric('institution_price', { precision: 18, scale: 4 }),
-  institutionValue: numeric('institution_value', { precision: 18, scale: 2 }),
-  capturedAt: timestamp('captured_at', { withTimezone: true }).defaultNow().notNull(),
-});
+export const investmentHoldings = pgTable(
+  'investment_holdings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    accountId: uuid('account_id').references(() => accounts.id, { onDelete: 'cascade' }).notNull(),
+    securityId: uuid('security_id').references(() => investmentSecurities.id),
+    quantity: numeric('quantity', { precision: 18, scale: 6 }),
+    costBasis: numeric('cost_basis', { precision: 18, scale: 2 }),
+    institutionPrice: numeric('institution_price', { precision: 18, scale: 4 }),
+    institutionValue: numeric('institution_value', { precision: 18, scale: 2 }),
+    syncJobId: text('sync_job_id'),
+    capturedAt: timestamp('captured_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index('holdings_org_account_captured_idx').on(t.orgId, t.accountId, t.capturedAt)],
+);
 
-export const investmentTransactions = pgTable('investment_transactions', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
-  accountId: uuid('account_id').references(() => accounts.id, { onDelete: 'cascade' }).notNull(),
-  securityId: uuid('security_id').references(() => investmentSecurities.id),
-  type: text('type'),
-  amount: numeric('amount', { precision: 18, scale: 2 }),
-  quantity: numeric('quantity', { precision: 18, scale: 6 }),
-  date: date('date'),
-  fees: numeric('fees', { precision: 18, scale: 2 }),
-});
+export const investmentTransactions = pgTable(
+  'investment_transactions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    accountId: uuid('account_id').references(() => accounts.id, { onDelete: 'cascade' }).notNull(),
+    securityId: uuid('security_id').references(() => investmentSecurities.id),
+    plaidInvestmentTransactionId: text('plaid_investment_transaction_id'),
+    type: text('type'),
+    subtype: text('subtype'),
+    name: text('name'),
+    amount: numeric('amount', { precision: 18, scale: 2 }),
+    quantity: numeric('quantity', { precision: 18, scale: 6 }),
+    price: numeric('price', { precision: 18, scale: 4 }),
+    date: date('date'),
+    fees: numeric('fees', { precision: 18, scale: 2 }),
+    syncJobId: text('sync_job_id'),
+  },
+  (t) => [
+    uniqueIndex('inv_txn_org_plaid_idx').on(t.orgId, t.plaidInvestmentTransactionId),
+    index('inv_txn_org_date_idx').on(t.orgId, t.date),
+  ],
+);
 
-export const liabilities = pgTable('liabilities', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
-  accountId: uuid('account_id').references(() => accounts.id, { onDelete: 'cascade' }).notNull(),
-  liabilityType: text('liability_type'),
-  apr: numeric('apr', { precision: 8, scale: 4 }),
-  minimumPayment: numeric('minimum_payment', { precision: 18, scale: 2 }),
-  lastPaymentAmount: numeric('last_payment_amount', { precision: 18, scale: 2 }),
-  lastPaymentDate: date('last_payment_date'),
-  nextPaymentDue: date('next_payment_due'),
-  capturedAt: timestamp('captured_at', { withTimezone: true }).defaultNow().notNull(),
-});
+export const liabilities = pgTable(
+  'liabilities',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    accountId: uuid('account_id').references(() => accounts.id, { onDelete: 'cascade' }).notNull(),
+    liabilityType: text('liability_type'),
+    apr: numeric('apr', { precision: 8, scale: 4 }),
+    minimumPayment: numeric('minimum_payment', { precision: 18, scale: 2 }),
+    lastPaymentAmount: numeric('last_payment_amount', { precision: 18, scale: 2 }),
+    lastPaymentDate: date('last_payment_date'),
+    nextPaymentDue: date('next_payment_due'),
+    syncJobId: text('sync_job_id'),
+    capturedAt: timestamp('captured_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index('liabilities_org_account_captured_idx').on(t.orgId, t.accountId, t.capturedAt)],
+);
 
 export const recurringStreams = pgTable('recurring_streams', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -179,3 +213,21 @@ export const recurringStreams = pgTable('recurring_streams', {
   firstDate: date('first_date'),
   lastDate: date('last_date'),
 });
+
+/** Full-fidelity Plaid payloads for replay/support — not exposed on list APIs. */
+export const plaidPayloadArchive = pgTable(
+  'plaid_payload_archive',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    itemId: uuid('item_id').references(() => plaidItems.id, { onDelete: 'set null' }),
+    kind: text('kind').notNull(),
+    plaidId: text('plaid_id'),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    capturedAt: timestamp('captured_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('plaid_archive_org_kind_idx').on(t.orgId, t.kind, t.capturedAt),
+    index('plaid_archive_item_idx').on(t.itemId, t.capturedAt),
+  ],
+);

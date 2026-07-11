@@ -6,22 +6,34 @@ import {
   transactions,
   dailyOrgSnapshots,
   manualAssets,
-  investmentHoldings,
   budgets,
   budgetActuals,
   categories,
   pnlCells,
 } from '@pf/database';
-import { convertCurrency, parseDecimal } from '@pf/shared';
+import { convertCurrency, parseDecimal, purposeFromAccount } from '@pf/shared';
 import { checkBudgetExceeded } from './rules.js';
+import { getLatestHoldings } from './plaid-sync.js';
 
 export async function getNetWorth(db: Database, orgId: string, targetCurrency = 'USD') {
-  const accts = await db.select().from(accounts).where(eq(accounts.orgId, orgId));
+  const accts = await db
+    .select()
+    .from(accounts)
+    .where(and(eq(accounts.orgId, orgId), eq(accounts.isHidden, false)));
+
   let totalAssets = 0;
   let totalLiabilities = 0;
   let cash = 0;
   let investments = 0;
+  let retirement = 0;
   let creditDebt = 0;
+
+  const latestHoldings = await getLatestHoldings(db, orgId);
+  const holdingsByAccount = new Map<string, number>();
+  for (const h of latestHoldings) {
+    const val = convertCurrency(parseDecimal(h.institutionValue), 'USD', targetCurrency);
+    holdingsByAccount.set(h.accountId, (holdingsByAccount.get(h.accountId) ?? 0) + val);
+  }
 
   for (const acct of accts) {
     const [balance] = await db
@@ -33,25 +45,26 @@ export async function getNetWorth(db: Database, orgId: string, targetCurrency = 
 
     const accountCurrency = balance?.isoCurrencyCode ?? acct.currency ?? 'USD';
     const current = convertCurrency(parseDecimal(balance?.current), accountCurrency, targetCurrency);
-    if (['credit', 'loan'].includes(acct.type)) {
+    const purpose = purposeFromAccount(acct);
+
+    if (purpose === 'liability') {
       totalLiabilities += Math.abs(current);
       creditDebt += Math.abs(current);
-    } else if (acct.type === 'investment') {
-      investments += current;
-      totalAssets += current;
-    } else {
-      cash += current;
-      totalAssets += current;
+      continue;
     }
-  }
 
-  const holdings = await db.select().from(investmentHoldings).where(eq(investmentHoldings.orgId, orgId));
-  for (const h of holdings) {
-    const val = convertCurrency(parseDecimal(h.institutionValue), 'USD', targetCurrency);
-    if (val > 0) {
-      investments += val;
-      totalAssets += val;
+    if (purpose === 'brokerage' || purpose === 'retirement') {
+      const holdingsSum = holdingsByAccount.get(acct.id);
+      // Prefer holdings when present; otherwise account balance — never both
+      const value = holdingsSum != null && holdingsSum > 0 ? holdingsSum : current;
+      investments += value;
+      if (purpose === 'retirement') retirement += value;
+      totalAssets += value;
+      continue;
     }
+
+    cash += current;
+    totalAssets += current;
   }
 
   const assets = await db.select().from(manualAssets).where(eq(manualAssets.orgId, orgId));
@@ -65,6 +78,7 @@ export async function getNetWorth(db: Database, orgId: string, targetCurrency = 
     netWorth: totalAssets - totalLiabilities,
     cash,
     investments,
+    retirement,
     creditDebt,
     currency: targetCurrency,
   };
@@ -198,7 +212,13 @@ export async function getCashFlowFromData(db: Database, orgId: string) {
   };
 }
 
-export async function populatePnlActuals(db: Database, orgId: string, periodId: string, year: number, month: number) {
+export async function populatePnlActuals(
+  db: Database,
+  orgId: string,
+  periodId: string,
+  year: number,
+  month: number,
+) {
   const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
   const monthEnd = new Date(year, month, 0).toISOString().split('T')[0]!;
 

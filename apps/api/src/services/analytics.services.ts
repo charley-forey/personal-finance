@@ -133,10 +133,8 @@ export class AnalyticsService {
 
   private async computeAllocationDrift(orgId: string, nw: Awaited<ReturnType<typeof syncGetNetWorth>>) {
     const target = { equity: 0.6, fixedIncome: 0.25, cash: 0.15 };
-    const holdings = await this.db
-      .select()
-      .from(investmentHoldings)
-      .where(eq(investmentHoldings.orgId, orgId));
+    const { getLatestHoldings } = await import('@pf/sync');
+    const holdings = await getLatestHoldings(this.db, orgId);
     const securities = await this.db.select().from(investmentSecurities);
 
     let equity = 0;
@@ -533,7 +531,7 @@ export class PnlService {
     const [updated] = await this.db
       .update(pnlPeriods)
       .set({ status: 'closed' })
-      .where(eq(pnlPeriods.id, periodId))
+      .where(and(eq(pnlPeriods.id, periodId), eq(pnlPeriods.orgId, orgId)))
       .returning();
 
     await this.db.insert(domainEvents).values({
@@ -547,7 +545,15 @@ export class PnlService {
     return updated;
   }
 
-  async updateCell(periodId: string, rowKey: string, columnKey: string, value: number) {
+  async updateCell(orgId: string, periodId: string, rowKey: string, columnKey: string, value: number) {
+    const [period] = await this.db
+      .select({ id: pnlPeriods.id })
+      .from(pnlPeriods)
+      .where(and(eq(pnlPeriods.id, periodId), eq(pnlPeriods.orgId, orgId)))
+      .limit(1);
+
+    if (!period) throw new Error('Period not found');
+
     const existing = await this.db
       .select()
       .from(pnlCells)

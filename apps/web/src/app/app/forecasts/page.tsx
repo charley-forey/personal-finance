@@ -1,13 +1,23 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { TrendingUp } from 'lucide-react';
-import { AppPageHeader, Card } from '@/components/ui';
+import { LineChart, Line } from 'recharts';
+import {
+  AppPageHeader,
+  Card,
+  ChartContainer,
+  ChartTooltip,
+  ChartXAxis,
+  ChartYAxis,
+  CHART_COLORS,
+  EmptyState,
+  Skeleton,
+  StatCard,
+} from '@/components/ui';
 import { PageError, PageLoading } from '@/components/page-states';
-import { EmptyState, Skeleton, StatCard } from '@/components/ui';
 import { useFormatCurrency } from '@/hooks/use-currency';
 import { api } from '@/lib/api';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { TrendingUp } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
 export default function ForecastsPage() {
   const formatCurrency = useFormatCurrency();
@@ -66,14 +76,14 @@ export default function ForecastsPage() {
             description="Link accounts and sync transactions to generate cash flow projections."
           />
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
+          <ChartContainer height={300}>
             <LineChart data={series}>
-              <XAxis dataKey="month" stroke="#71717a" />
-              <YAxis stroke="#71717a" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => formatCurrency(v)} />
-              <Line type="monotone" dataKey="balance" stroke="#3b82f6" strokeWidth={2} dot={false} />
+              <ChartXAxis dataKey="month" />
+              <ChartYAxis tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+              <ChartTooltip formatter={(v) => formatCurrency(Number(v))} />
+              <Line type="monotone" dataKey="balance" stroke={CHART_COLORS[1]} strokeWidth={2} dot={false} />
             </LineChart>
-          </ResponsiveContainer>
+          </ChartContainer>
         )}
       </Card>
     </div>

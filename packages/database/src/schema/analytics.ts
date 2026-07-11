@@ -352,6 +352,7 @@ export const healthScores = pgTable('health_scores', {
 export const subscriptions = pgTable('subscriptions', {
   id: uuid('id').primaryKey().defaultRandom(),
   orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+  stripeCustomerId: text('stripe_customer_id'),
   stripeSubscriptionId: text('stripe_subscription_id'),
   planTier: text('plan_tier').notNull(),
   status: text('status').notNull(),
@@ -418,6 +419,7 @@ export const agentMemories = pgTable('agent_memories', {
 export const advisorFirms = pgTable('advisor_firms', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
+  ownerUserId: uuid('owner_user_id').references(() => users.id),
   logoUrl: text('logo_url'),
   brandColorsJson: jsonb('brand_colors_json'),
   customDomain: text('custom_domain'),
@@ -429,7 +431,8 @@ export const advisorClients = pgTable('advisor_clients', {
   firmId: uuid('firm_id').references(() => advisorFirms.id, { onDelete: 'cascade' }).notNull(),
   orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
   advisorUserId: uuid('advisor_user_id').references(() => users.id),
-  status: text('status').default('active'),
+  status: text('status').default('pending'),
+  scopesJson: jsonb('scopes_json').$type<string[]>().default(['read_balances']),
   notes: text('notes'),
   lastReviewDate: date('last_review_date'),
   nextReviewDate: date('next_review_date'),

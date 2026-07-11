@@ -9,9 +9,10 @@ import {
   Req,
   Inject,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { eq, desc, inArray } from 'drizzle-orm';
+import { eq, desc, inArray, and } from 'drizzle-orm';
 import type { Database } from '@pf/database';
 import {
   transactions,
@@ -19,6 +20,7 @@ import {
   budgets,
   investmentHoldings,
   investmentSecurities,
+  investmentTransactions,
   liabilities,
   recurringStreams,
   lifePlans,
@@ -30,7 +32,7 @@ import {
   accountBalances,
 } from '@pf/database';
 import { simulateDebtPayoff, calculateFIRE, eventDrivenCashFlow, portfolioAllocation, runScenario, buildBillCalendar, type CashFlowScheduleItem } from '@pf/analytics';
-import { getCashFlowFromData } from '@pf/sync';
+import { getCashFlowFromData, getLatestHoldings, getLatestLiabilities, getRecentMoneyChanges } from '@pf/sync';
 import { AuthGuard, getAuth, RequireRoles } from '../../common/auth.guard';
 import { AnalyticsService, PnlService, TaxService } from '../../services/analytics.services';
 import { DATABASE } from '../../database.module';
@@ -89,10 +91,11 @@ export class AnalyticsController {
   @Post('pnl/:periodId/cells')
   @RequireRoles('admin')
   async updatePnlCell(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
     @Param('periodId') periodId: string,
     @Body() body: { rowKey: string; columnKey: string; value: number },
   ) {
-    return this.pnl.updateCell(periodId, body.rowKey, body.columnKey, body.value);
+    return this.pnl.updateCell(getAuth(req).orgId, periodId, body.rowKey, body.columnKey, body.value);
   }
 
   @Post('pnl/:periodId/close')
@@ -137,10 +140,7 @@ export class AnalyticsController {
   @Get('investments/holdings')
   async holdings(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
     const auth = getAuth(req);
-    const rows = await this.db
-      .select()
-      .from(investmentHoldings)
-      .where(eq(investmentHoldings.orgId, auth.orgId));
+    const rows = await getLatestHoldings(this.db, auth.orgId);
     const securities = await this.db.select().from(investmentSecurities);
     return rows.map((h) => {
       const sec = securities.find((s) => s.id === h.securityId);
@@ -149,6 +149,32 @@ export class AnalyticsController {
         securityName: sec?.name,
         ticker: sec?.ticker,
         securityType: sec?.type,
+        syncJobId: h.syncJobId,
+        provenance: { source: 'plaid', syncJobId: h.syncJobId, capturedAt: h.capturedAt },
+      };
+    });
+  }
+
+  @Get('investments/transactions')
+  async investmentTxns(
+    @Req() req: { auth?: ReturnType<typeof getAuth> },
+    @Query('limit') limit = '50',
+  ) {
+    const auth = getAuth(req);
+    const rows = await this.db
+      .select()
+      .from(investmentTransactions)
+      .where(eq(investmentTransactions.orgId, auth.orgId))
+      .orderBy(desc(investmentTransactions.date))
+      .limit(parseInt(limit, 10) || 50);
+    const securities = await this.db.select().from(investmentSecurities);
+    return rows.map((t) => {
+      const sec = securities.find((s) => s.id === t.securityId);
+      return {
+        ...t,
+        securityName: sec?.name,
+        ticker: sec?.ticker,
+        provenance: { source: 'plaid', syncJobId: t.syncJobId },
       };
     });
   }
@@ -157,10 +183,7 @@ export class AnalyticsController {
   async allocation(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
     const auth = getAuth(req);
     const nw = await this.analytics.getNetWorth(auth.orgId);
-    const rows = await this.db
-      .select()
-      .from(investmentHoldings)
-      .where(eq(investmentHoldings.orgId, auth.orgId));
+    const rows = await getLatestHoldings(this.db, auth.orgId);
     const securities = await this.db.select().from(investmentSecurities);
     const holdings = rows.map((h) => {
       const sec = securities.find((s) => s.id === h.securityId);
@@ -175,6 +198,12 @@ export class AnalyticsController {
     return portfolioAllocation(holdings, nw.cash);
   }
 
+  @Get('activity/recent-changes')
+  async recentChanges(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
+    const auth = getAuth(req);
+    return getRecentMoneyChanges(this.db, auth.orgId, 48);
+  }
+
   @Get('calendar/bills')
   async billCalendar(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
     const auth = getAuth(req);
@@ -182,10 +211,7 @@ export class AnalyticsController {
       .select()
       .from(recurringStreams)
       .where(eq(recurringStreams.orgId, auth.orgId));
-    const liabilityRows = await this.db
-      .select()
-      .from(liabilities)
-      .where(eq(liabilities.orgId, auth.orgId));
+    const liabilityRows = await getLatestLiabilities(this.db, auth.orgId);
 
     const events = buildBillCalendar(
       recurring.map((r) => ({
@@ -211,7 +237,7 @@ export class AnalyticsController {
   @Get('liabilities')
   async listLiabilities(@Req() req: { auth?: ReturnType<typeof getAuth> }) {
     const auth = getAuth(req);
-    const rows = await this.db.select().from(liabilities).where(eq(liabilities.orgId, auth.orgId));
+    const rows = await getLatestLiabilities(this.db, auth.orgId);
     if (rows.length === 0) return [];
 
     const accountIds = [...new Set(rows.map((r) => r.accountId))];
@@ -412,11 +438,11 @@ export class AnalyticsController {
     const [scenario] = await this.db
       .select()
       .from(scenarios)
-      .where(eq(scenarios.id, id))
+      .where(and(eq(scenarios.id, id), eq(scenarios.orgId, auth.orgId)))
       .limit(1);
 
-    if (!scenario || scenario.orgId !== auth.orgId) {
-      throw new Error('Scenario not found');
+    if (!scenario) {
+      throw new NotFoundException('Scenario not found');
     }
 
     const inputs = scenario.inputsJson as Record<string, unknown>;
@@ -438,7 +464,7 @@ export class AnalyticsController {
     const [updated] = await this.db
       .update(scenarios)
       .set({ resultsJson: result as unknown as Record<string, unknown> })
-      .where(eq(scenarios.id, id))
+      .where(and(eq(scenarios.id, id), eq(scenarios.orgId, auth.orgId)))
       .returning();
 
     return { scenario: updated, result };

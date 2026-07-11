@@ -191,7 +191,7 @@ export function CommandPalette() {
   let lastSection: string | null = null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[15vh]">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-start sm:justify-center sm:p-4 sm:pt-[15vh]">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={close} aria-hidden />
       <div
         ref={dialogRef}
@@ -199,9 +199,9 @@ export function CommandPalette() {
         aria-modal="true"
         aria-label="Command palette"
         tabIndex={-1}
-        className="relative z-10 w-full max-w-lg overflow-hidden rounded-xl border border-card-border bg-card shadow-xl outline-none"
+        className="relative z-10 flex max-h-[85dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-xl border border-card-border bg-card shadow-xl outline-none sm:rounded-xl"
       >
-        <div className="flex items-center gap-3 border-b border-card-border px-4">
+        <div className="flex shrink-0 items-center gap-3 border-b border-card-border px-4">
           <Search className="h-4 w-4 shrink-0 text-muted" aria-hidden />
           <input
             ref={inputRef}
@@ -236,10 +236,12 @@ export function CommandPalette() {
           id="command-palette-results"
           ref={listRef}
           role="listbox"
-          className="max-h-72 overflow-y-auto p-2"
+          className="min-h-0 flex-1 overflow-y-auto p-2"
         >
           {items.length === 0 && (
-            <li className="px-3 py-6 text-center text-sm text-muted">No matching pages or actions</li>
+            <li className="px-3 py-6 text-center text-sm text-muted">
+              No matching pages. Browse hubs in the sidebar or More menu.
+            </li>
           )}
           {items.map((item, index) => {
             const showHeader = item.section !== lastSection;
@@ -256,7 +258,7 @@ export function CommandPalette() {
                   id={`command-item-${index}`}
                   data-index={index}
                   className={clsx(
-                    'flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
+                    'flex w-full min-h-11 items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
                     index === activeIndex
                       ? 'bg-primary/10 text-primary'
                       : 'text-foreground hover:bg-white/5',
@@ -265,7 +267,9 @@ export function CommandPalette() {
                   onClick={() => navigate(item)}
                 >
                   <span className="truncate font-medium">{item.label}</span>
-                  <span className="shrink-0 text-xs text-muted">{item.href}</span>
+                  <span className="hidden shrink-0 truncate text-xs text-muted sm:inline max-w-[40%]">
+                    {item.href}
+                  </span>
                 </button>
               </li>
             );
